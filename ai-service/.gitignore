@@ -1,0 +1,85 @@
+# ===========================
+# Python AI Service .gitignore
+# ===========================
+
+# ----- Virtual Environment -----
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ----- Environment Files -----
+.env
+.env.local
+*.env
+
+# ----- Byte-compiled / Optimized Files -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ----- Distribution / Packaging -----
+dist/
+build/
+eggs/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+*.whl
+MANIFEST
+
+# ----- Installer Logs -----
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ----- Testing -----
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ----- Jupyter Notebooks -----
+.ipynb_checkpoints/
+
+# ----- MyPy -----
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ----- IDE -----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+
+# ----- ML Models & Data -----
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+models/
+data/
+datasets/
+
+# ----- Logs -----
+*.log
+logs/
+
+# ----- Flask/FastAPI -----
+instance/
+.webassets-cache

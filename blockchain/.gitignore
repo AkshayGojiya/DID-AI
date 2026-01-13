@@ -1,0 +1,44 @@
+# ===========================
+# Blockchain (Solidity) .gitignore
+# ===========================
+
+# ----- Dependencies -----
+node_modules/
+
+# ----- Environment -----
+.env
+.env.local
+*.env
+
+# ----- Build Artifacts -----
+artifacts/
+cache/
+out/
+build/
+typechain/
+typechain-types/
+
+# ----- Hardhat / Foundry -----
+deployments/localhost/
+coverage/
+coverage.json
+.openzeppelin/
+
+# ----- Logs -----
+*.log
+npm-debug.log*
+
+# ----- IDE -----
+.vscode/
+.idea/
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+
+# ----- Secrets (Never commit!) -----
+*.pem
+*.key
+secrets.json
+.secret
+mnemonic.txt

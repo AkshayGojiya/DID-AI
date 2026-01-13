@@ -1,0 +1,135 @@
+# VerifyX Docker Compose Configuration
+# =====================================
+# Development environment setup
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # Frontend - Next.js Application
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_AI_SERVICE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+  # ==========================================
+  # Backend - Express.js API
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/verifyx
+      - AI_SERVICE_URL=http://ai-service:8000
+      - FRONTEND_URL=http://localhost:3000
+      - JWT_SECRET=dev-secret-key-change-in-production
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - ai-service
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+  # ==========================================
+  # AI Service - Flask Application
+  # ==========================================
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=true
+      - PORT=8000
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5000
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+  # ==========================================
+  # MongoDB Database
+  # ==========================================
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=verifyx
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+  # ==========================================
+  # IPFS Node (Optional)
+  # ==========================================
+  ipfs:
+    image: ipfs/kubo:latest
+    ports:
+      - "4001:4001"      # P2P
+      - "5001:5001"      # API
+      - "8080:8080"      # Gateway
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+  # ==========================================
+  # Redis Cache (Optional)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - verifyx-network
+    restart: unless-stopped
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  verifyx-network:
+    driver: bridge
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  mongodb_data:
+  mongodb_config:
+  ipfs_data:
+  redis_data:
