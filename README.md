@@ -206,7 +206,7 @@ verifyx/
 
 ---
 
-## 🛣️ Roadmap
+<!-- ## 🛣️ Roadmap
 
 - [x] Core frontend UI with animations
 - [x] Backend API structure
@@ -220,7 +220,7 @@ verifyx/
 - [ ] CI/CD pipeline
 - [ ] Production deployment
 
----
+--- -->
 
 ## 🤝 Contributing
 
@@ -242,14 +242,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-**VerifyX Team** - [@verifyx](https://twitter.com/verifyx)
+**VerifyX Team** - [@verifyx](https://github.com/AkshayGojiya/DID-AI)
 
-Project Link: [https://github.com/yourusername/verifyx](https://github.com/yourusername/verifyx)
+Project Link: [https://github.com/AkshayGojiya/DID-AI](https://github.com/AkshayGojiya/DID-AI)
 
 ---
 
 <div align="center">
 
-Made with ❤️ by the VerifyX Team
+Made with ❤️ by the Akshay Gojiya
 
 </div>
