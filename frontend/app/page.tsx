@@ -237,16 +237,34 @@ export default function Home() {
 
                 {/* Scroll Indicator */}
                 <motion.div
-                    className="absolute bottom-8 left-1/2 -translate-x-1/2"
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1 }}
                 >
-                    <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-2">
-                        <motion.div
-                            className="w-1 h-3 bg-white/40 rounded-full"
-                            animate={{ opacity: [0.4, 1, 0.4], scaleY: [1, 0.5, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                        />
+                    {/* <span className="text-xs text-white/40 uppercase tracking-widest">Scroll</span> */}
+                    <div className="relative flex flex-col items-center">
+                        {[0, 1, 2].map((i) => (
+                            <motion.svg
+                                key={i}
+                                className="w-5 h-5 text-violet-400/60"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                animate={{
+                                    y: [0, 6, 0],
+                                    opacity: [0.2, 1, 0.2],
+                                }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    delay: i * 0.2,
+                                }}
+                                style={{ marginTop: i === 0 ? 0 : -8 }}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </motion.svg>
+                        ))}
                     </div>
                 </motion.div>
             </section>
