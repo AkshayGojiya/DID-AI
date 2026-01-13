@@ -45,18 +45,17 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
+/* Hide Scrollbar */
+html {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #8b5cf6, #06b6d4);
-  border-radius: 3px;
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* ================================
