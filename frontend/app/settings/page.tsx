@@ -67,8 +67,8 @@ export default function SettingsPage() {
                                     key={section.id}
                                     onClick={() => setActiveSection(section.id)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${activeSection === section.id
-                                            ? "bg-white/10 text-white"
-                                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                                        ? "bg-white/10 text-white"
+                                        : "text-white/60 hover:bg-white/5 hover:text-white"
                                         }`}
                                 >
                                     <span className="text-xl">{section.icon}</span>
@@ -172,13 +172,14 @@ export default function SettingsPage() {
                                             <select
                                                 value={settings.autoLockTimeout}
                                                 onChange={(e) => setSettings((s) => ({ ...s, autoLockTimeout: e.target.value }))}
-                                                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                className="bg-[rgba(255, 255, 255, 0.03)] border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                                                style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                                             >
-                                                <option value="5">5 minutes</option>
-                                                <option value="15">15 minutes</option>
-                                                <option value="30">30 minutes</option>
-                                                <option value="60">1 hour</option>
-                                                <option value="never">Never</option>
+                                                <option value="5" className="bg-[#0a0a1a] text-white">5 minutes</option>
+                                                <option value="15" className="bg-[#0a0a1a] text-white">15 minutes</option>
+                                                <option value="30" className="bg-[#0a0a1a] text-white">30 minutes</option>
+                                                <option value="60" className="bg-[#0a0a1a] text-white">1 hour</option>
+                                                <option value="never" className="bg-[#0a0a1a] text-white">Never</option>
                                             </select>
                                         </div>
                                     </div>
@@ -330,11 +331,14 @@ export default function SettingsPage() {
                                                 <p className="font-medium mb-1">Network</p>
                                                 <p className="text-sm text-white/50">Select blockchain network</p>
                                             </div>
-                                            <select className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm">
-                                                <option>Ethereum Mainnet</option>
-                                                <option>Polygon</option>
-                                                <option>Sepolia Testnet</option>
-                                                <option>Local Hardhat</option>
+                                            <select
+                                                className="bg-[#0a0a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                                                style={{ backgroundColor: '#0a0a1a' }}
+                                            >
+                                                <option className="bg-[#0a0a1a] text-white">Ethereum Mainnet</option>
+                                                <option className="bg-[#0a0a1a] text-white">Polygon</option>
+                                                <option className="bg-[#0a0a1a] text-white">Sepolia Testnet</option>
+                                                <option className="bg-[#0a0a1a] text-white">Local Hardhat</option>
                                             </select>
                                         </div>
 

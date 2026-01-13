@@ -116,15 +116,16 @@ export default function ContactPage() {
                                         <select
                                             value={formData.subject}
                                             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                            className="input-glass"
+                                            className="input-glass bg-[rgba(255, 255, 255, 0.03)] text-white"
+                                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                                             required
                                         >
-                                            <option value="">Select a subject</option>
-                                            <option value="general">General Inquiry</option>
-                                            <option value="support">Technical Support</option>
-                                            <option value="sales">Sales & Pricing</option>
-                                            <option value="partnership">Partnership</option>
-                                            <option value="other">Other</option>
+                                            <option value="" className="bg-[#0a0a1a] text-white">Select a subject</option>
+                                            <option value="general" className="bg-[#0a0a1a] text-white">General Inquiry</option>
+                                            <option value="support" className="bg-[#0a0a1a] text-white">Technical Support</option>
+                                            <option value="sales" className="bg-[#0a0a1a] text-white">Sales &amp; Pricing</option>
+                                            <option value="partnership" className="bg-[#0a0a1a] text-white">Partnership</option>
+                                            <option value="other" className="bg-[#0a0a1a] text-white">Other</option>
                                         </select>
                                     </div>
 
