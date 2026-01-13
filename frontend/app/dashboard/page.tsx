@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 // Icons
 const VerifiedIcon = () => (
@@ -71,10 +72,23 @@ const recentActivity = [
     { action: "Identity verified", time: "2 hours ago", type: "success" },
     { action: "Document uploaded", time: "1 day ago", type: "info" },
     { action: "Wallet connected", time: "2 days ago", type: "info" },
+    { action: "Credential shared", time: "3 days ago", type: "info" },
 ];
 
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 },
+    },
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+};
+
 export default function Dashboard() {
-    const [isConnected] = useState(true);
     const [copied, setCopied] = useState(false);
 
     const copyDID = () => {
@@ -84,122 +98,152 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen pt-24 px-6 pb-12">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <Link href="/" className="flex items-center gap-3 group">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
-                                <span className="text-white font-bold text-lg">V</span>
-                            </div>
-                            <span className="text-xl font-bold gradient-text-animated">VerifyX</span>
-                        </Link>
-
-                        <div className="hidden md:flex items-center gap-8">
-                            <Link href="/dashboard" className="nav-link text-white">Dashboard</Link>
-                            <Link href="/verify" className="nav-link">Verify</Link>
-                            <Link href="/credentials" className="nav-link">Credentials</Link>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            {isConnected && (
-                                <div className="flex items-center gap-2 px-4 py-2 glass rounded-full">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                    <span className="text-sm">{mockWallet}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen pt-28 px-6 pb-12">
+            <motion.div
+                className="max-w-7xl mx-auto"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
-                <div className="mb-12">
-                    <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
-                    <p className="text-gray-400">Manage your decentralized identity and credentials</p>
-                </div>
+                <motion.div variants={itemVariants} className="mb-12">
+                    <h1 className="text-4xl font-bold mb-2">
+                        <span className="gradient-text">Dashboard</span>
+                    </h1>
+                    <p className="text-white/50">Manage your decentralized identity and credentials</p>
+                </motion.div>
 
                 {/* DID Card */}
-                <div className="glass-card p-6 rounded-2xl mb-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <motion.div
+                    variants={itemVariants}
+                    className="glass-card p-6 rounded-2xl mb-8 relative overflow-hidden"
+                >
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5"
+                        animate={{ opacity: [0.5, 0.8, 0.5] }}
+                        transition={{ duration: 4, repeat: Infinity }}
+                    />
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <h3 className="text-lg font-semibold">Your Decentralized Identity</h3>
-                                <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1">
+                                <motion.span
+                                    className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1"
+                                    animate={{ scale: [1, 1.05, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                >
                                     <VerifiedIcon />
                                     Active
-                                </span>
+                                </motion.span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <code className="text-sm text-gray-400 bg-white/5 px-3 py-1.5 rounded-lg font-mono">
+                                <code className="text-sm text-white/60 bg-white/5 px-3 py-1.5 rounded-lg font-mono">
                                     {mockDID}
                                 </code>
-                                <button
+                                <motion.button
                                     onClick={copyDID}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                                     title="Copy DID"
                                 >
                                     <CopyIcon />
-                                </button>
-                                {copied && <span className="text-sm text-emerald-400">Copied!</span>}
+                                </motion.button>
+                                {copied && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="text-sm text-emerald-400"
+                                    >
+                                        Copied!
+                                    </motion.span>
+                                )}
                             </div>
                         </div>
-                        <Link href="/credentials" className="btn-primary flex items-center gap-2">
-                            <QRIcon />
-                            Share Identity
-                        </Link>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Link href="/credentials" className="btn-primary flex items-center gap-2">
+                                <QRIcon />
+                                Share Identity
+                            </Link>
+                        </motion.div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <motion.div
+                    variants={containerVariants}
+                    className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+                >
                     {[
                         { label: "Verified Credentials", value: "2", icon: <VerifiedIcon />, color: "from-emerald-500 to-teal-500" },
-                        { label: "Documents Stored", value: "5", icon: <DocumentIcon />, color: "from-indigo-500 to-purple-500" },
+                        { label: "Documents Stored", value: "5", icon: <DocumentIcon />, color: "from-violet-500 to-purple-500" },
                         { label: "Pending Reviews", value: "1", icon: <ClockIcon />, color: "from-amber-500 to-orange-500" },
                         { label: "QR Shares", value: "12", icon: <QRIcon />, color: "from-cyan-500 to-blue-500" },
                     ].map((stat, index) => (
-                        <div key={index} className="feature-card">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4`}>
+                        <motion.div
+                            key={index}
+                            variants={itemVariants}
+                            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                            className="feature-card cursor-pointer"
+                        >
+                            <motion.div
+                                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-4`}
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                            >
                                 {stat.icon}
-                            </div>
-                            <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                            <div className="text-sm text-gray-400">{stat.label}</div>
-                        </div>
+                            </motion.div>
+                            <motion.div
+                                className="text-3xl font-bold mb-1"
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.2 + index * 0.1 }}
+                            >
+                                {stat.value}
+                            </motion.div>
+                            <div className="text-sm text-white/50">{stat.label}</div>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
 
                 {/* Main Content Grid */}
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Credentials */}
-                    <div className="lg:col-span-2">
+                    <motion.div variants={itemVariants} className="lg:col-span-2">
                         <div className="glass-card p-6 rounded-2xl">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-semibold">Your Credentials</h3>
-                                <Link href="/verify" className="btn-primary text-sm py-2 px-4 flex items-center gap-2">
-                                    <PlusIcon />
-                                    New Verification
-                                </Link>
+                                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                                    <Link href="/verify" className="btn-primary text-sm py-2 px-4 flex items-center gap-2">
+                                        <PlusIcon />
+                                        New Verification
+                                    </Link>
+                                </motion.div>
                             </div>
 
                             <div className="space-y-4">
-                                {credentials.map((cred) => (
-                                    <div
+                                {credentials.map((cred, index) => (
+                                    <motion.div
                                         key={cred.id}
-                                        className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        whileHover={{ scale: 1.01 }}
+                                        className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${cred.status === 'verified'
-                                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                                    : 'bg-amber-500/20 text-amber-400'
-                                                }`}>
+                                            <motion.div
+                                                className={`w-12 h-12 rounded-xl flex items-center justify-center ${cred.status === 'verified'
+                                                        ? 'bg-emerald-500/20 text-emerald-400'
+                                                        : 'bg-amber-500/20 text-amber-400'
+                                                    }`}
+                                                whileHover={{ rotate: 10 }}
+                                            >
                                                 {cred.status === 'verified' ? <VerifiedIcon /> : <ClockIcon />}
-                                            </div>
+                                            </motion.div>
                                             <div>
                                                 <h4 className="font-medium">{cred.type}</h4>
-                                                <p className="text-sm text-gray-400">
+                                                <p className="text-sm text-white/40">
                                                     Issued: {cred.issuedDate}
                                                     {cred.expiryDate && ` • Expires: ${cred.expiryDate}`}
                                                 </p>
@@ -212,62 +256,85 @@ export default function Dashboard() {
                                                 }`}>
                                                 {cred.status === 'verified' ? 'Verified' : 'Pending'}
                                             </span>
-                                            <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded-lg transition-all">
+                                            <motion.button
+                                                className="p-2 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded-lg transition-all"
+                                                whileHover={{ x: 5 }}
+                                            >
                                                 <ArrowRightIcon />
-                                            </button>
+                                            </motion.button>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Recent Activity */}
-                    <div className="lg:col-span-1">
+                    {/* Sidebar */}
+                    <motion.div variants={itemVariants} className="lg:col-span-1 space-y-4">
+                        {/* Recent Activity */}
                         <div className="glass-card p-6 rounded-2xl">
                             <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
                             <div className="space-y-4">
                                 {recentActivity.map((activity, index) => (
-                                    <div key={index} className="flex items-start gap-3">
-                                        <div className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-emerald-400' : 'bg-indigo-400'
-                                            }`} />
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className="flex items-start gap-3"
+                                    >
+                                        <motion.div
+                                            className={`w-2 h-2 rounded-full mt-2 ${activity.type === 'success' ? 'bg-emerald-400' : 'bg-violet-400'
+                                                }`}
+                                            animate={{ scale: [1, 1.2, 1] }}
+                                            transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                                        />
                                         <div>
                                             <p className="text-sm">{activity.action}</p>
-                                            <p className="text-xs text-gray-500">{activity.time}</p>
+                                            <p className="text-xs text-white/40">{activity.time}</p>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
 
                             <Link
                                 href="/activity"
-                                className="block mt-6 text-center text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                                className="block mt-6 text-center text-sm text-violet-400 hover:text-violet-300 transition-colors"
                             >
-                                View All Activity
+                                View All Activity →
                             </Link>
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="glass-card p-6 rounded-2xl mt-4">
+                        <div className="glass-card p-6 rounded-2xl">
                             <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                             <div className="space-y-2">
-                                <Link href="/verify" className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                        <PlusIcon />
-                                    </div>
-                                    <span className="text-sm">Start New Verification</span>
-                                </Link>
-                                <Link href="/credentials" className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
-                                        <QRIcon />
-                                    </div>
-                                    <span className="text-sm">Generate QR Code</span>
-                                </Link>
+                                {[
+                                    { href: "/verify", icon: <PlusIcon />, label: "Start New Verification", color: "violet" },
+                                    { href: "/credentials", icon: <QRIcon />, label: "Generate QR Code", color: "cyan" },
+                                    { href: "/scan", icon: <DocumentIcon />, label: "Scan QR Code", color: "pink" },
+                                ].map((action, index) => (
+                                    <motion.div
+                                        key={action.href}
+                                        whileHover={{ x: 5 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        <Link
+                                            href={action.href}
+                                            className="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                                        >
+                                            <div className={`w-8 h-8 rounded-lg bg-${action.color}-500/20 flex items-center justify-center text-${action.color}-400`}>
+                                                {action.icon}
+                                            </div>
+                                            <span className="text-sm">{action.label}</span>
+                                        </Link>
+                                    </motion.div>
+                                ))}
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

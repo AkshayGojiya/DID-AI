@@ -1,101 +1,45 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useRef } from "react";
-
-// Icons
-const UploadIcon = () => (
-    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-    </svg>
-);
-
-const CameraIcon = () => (
-    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-    </svg>
-);
-
-const FaceIcon = () => (
-    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
-    </svg>
-);
-
-const CheckCircleIcon = () => (
-    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
-const ArrowLeftIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-    </svg>
-);
-
-const ArrowRightIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-    </svg>
-);
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 const steps = [
-    { id: 1, title: "Upload Document", icon: <UploadIcon />, description: "Upload your identity document" },
-    { id: 2, title: "Take Selfie", icon: <CameraIcon />, description: "Capture a live photo of yourself" },
-    { id: 3, title: "Liveness Check", icon: <FaceIcon />, description: "Complete the liveness verification" },
-    { id: 4, title: "Review & Submit", icon: <CheckCircleIcon />, description: "Review and submit for verification" },
+    { id: 1, name: "Upload Document", icon: "📄" },
+    { id: 2, name: "Take Selfie", icon: "📸" },
+    { id: 3, name: "Liveness Check", icon: "🔍" },
+    { id: 4, name: "Review & Submit", icon: "✓" },
 ];
 
 const documentTypes = [
     { id: "passport", name: "Passport", icon: "🛂" },
     { id: "driving_license", name: "Driving License", icon: "🚗" },
-    { id: "national_id", name: "National ID Card", icon: "🪪" },
-    { id: "other", name: "Other ID", icon: "📄" },
+    { id: "national_id", name: "National ID", icon: "🪪" },
+    { id: "residence_permit", name: "Residence Permit", icon: "🏠" },
 ];
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 },
+    },
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+};
 
 export default function VerifyPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedDocType, setSelectedDocType] = useState<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [dragActive, setDragActive] = useState(false);
     const [selfieCapture, setSelfieCapture] = useState(false);
     const [livenessComplete, setLivenessComplete] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            setUploadedFile(e.dataTransfer.files[0]);
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setUploadedFile(e.target.files[0]);
-        }
-    };
-
-    const nextStep = () => {
-        if (currentStep < 4) setCurrentStep(currentStep + 1);
-    };
-
-    const prevStep = () => {
-        if (currentStep > 1) setCurrentStep(currentStep - 1);
-    };
 
     const canProceed = () => {
         switch (currentStep) {
@@ -107,357 +51,420 @@ export default function VerifyPage() {
         }
     };
 
+    const handleFileSelect = (file: File) => {
+        setUploadedFile(file);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleSubmit = async () => {
+        setIsProcessing(true);
+        await new Promise((r) => setTimeout(r, 3000));
+        setIsProcessing(false);
+    };
+
     return (
-        <div className="min-h-screen pt-24 px-6 pb-12">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <Link href="/" className="flex items-center gap-3 group">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
-                                <span className="text-white font-bold text-lg">V</span>
-                            </div>
-                            <span className="text-xl font-bold gradient-text-animated">VerifyX</span>
-                        </Link>
-
-                        <Link href="/dashboard" className="btn-secondary text-sm py-2 px-4">
-                            Back to Dashboard
-                        </Link>
-                    </div>
-                </div>
-            </nav>
-
+        <div className="min-h-screen pt-28 pb-20 px-6">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold mb-4">
-                        <span className="gradient-text">Identity Verification</span>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-12"
+                >
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                        <span className="gradient-text">Verify Your Identity</span>
                     </h1>
-                    <p className="text-gray-400">Complete the verification process to get your decentralized identity credential</p>
-                </div>
+                    <p className="text-white/60 text-lg">
+                        Complete the verification process in 4 simple steps
+                    </p>
+                </motion.div>
 
                 {/* Progress Steps */}
-                <div className="flex items-center justify-between mb-12 relative">
-                    {/* Progress Line */}
-                    <div className="absolute top-6 left-0 right-0 h-0.5 bg-white/10" />
-                    <div
-                        className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all duration-500"
-                        style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-                    />
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="relative mb-12"
+                >
+                    <div className="flex justify-between items-center">
+                        {steps.map((step, index) => (
+                            <div key={step.id} className="flex-1 relative">
+                                <motion.div
+                                    className="flex flex-col items-center relative z-10"
+                                    whileHover={{ scale: 1.05 }}
+                                >
+                                    <motion.div
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all ${currentStep >= step.id
+                                                ? "bg-gradient-to-br from-violet-500 to-cyan-500"
+                                                : "bg-white/10"
+                                            }`}
+                                        animate={{
+                                            scale: currentStep === step.id ? [1, 1.1, 1] : 1,
+                                        }}
+                                        transition={{ duration: 0.5, repeat: currentStep === step.id ? Infinity : 0, repeatDelay: 2 }}
+                                    >
+                                        {step.icon}
+                                    </motion.div>
+                                    <span className={`mt-3 text-sm font-medium ${currentStep >= step.id ? "text-white" : "text-white/40"
+                                        }`}>
+                                        {step.name}
+                                    </span>
+                                </motion.div>
 
-                    {steps.map((step) => (
-                        <div key={step.id} className="relative z-10 flex flex-col items-center">
-                            <div
-                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep >= step.id
-                                        ? 'bg-gradient-to-br from-indigo-500 to-cyan-500 text-white'
-                                        : 'bg-white/10 text-gray-500'
-                                    }`}
-                            >
-                                {currentStep > step.id ? (
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                ) : (
-                                    <span className="font-semibold">{step.id}</span>
+                                {index < steps.length - 1 && (
+                                    <div className="absolute top-7 left-1/2 w-full h-0.5 bg-white/10">
+                                        <motion.div
+                                            className="h-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                                            initial={{ width: "0%" }}
+                                            animate={{ width: currentStep > step.id ? "100%" : "0%" }}
+                                            transition={{ duration: 0.5 }}
+                                        />
+                                    </div>
                                 )}
                             </div>
-                            <span className={`mt-2 text-xs text-center hidden sm:block ${currentStep >= step.id ? 'text-white' : 'text-gray-500'
-                                }`}>
-                                {step.title}
-                            </span>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                </motion.div>
 
                 {/* Step Content */}
-                <div className="glass-card p-8 rounded-2xl mb-8">
-                    {/* Step 1: Document Upload */}
-                    {currentStep === 1 && (
-                        <div className="animate-slide-up">
-                            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                                <UploadIcon />
-                                Upload Identity Document
-                            </h2>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="glass-card p-8 rounded-3xl mb-8"
+                    >
+                        {/* Step 1: Upload Document */}
+                        {currentStep === 1 && (
+                            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                    Select & Upload Your Document
+                                </motion.h2>
 
-                            {/* Document Type Selection */}
-                            <div className="mb-8">
-                                <label className="block text-sm font-medium text-gray-400 mb-3">Select Document Type</label>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {documentTypes.map((doc) => (
-                                        <button
-                                            key={doc.id}
-                                            onClick={() => setSelectedDocType(doc.id)}
-                                            className={`p-4 rounded-xl border-2 transition-all duration-300 ${selectedDocType === doc.id
-                                                    ? 'border-indigo-500 bg-indigo-500/10'
-                                                    : 'border-white/10 hover:border-white/30'
-                                                }`}
-                                        >
-                                            <div className="text-2xl mb-2">{doc.icon}</div>
-                                            <div className="text-sm font-medium">{doc.name}</div>
-                                        </button>
+                                {/* Document Type Selection */}
+                                <motion.div variants={itemVariants} className="mb-8">
+                                    <label className="block text-sm text-white/60 mb-3">Document Type</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {documentTypes.map((docType) => (
+                                            <motion.button
+                                                key={docType.id}
+                                                onClick={() => setSelectedDocType(docType.id)}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                className={`p-4 rounded-xl border-2 transition-all ${selectedDocType === docType.id
+                                                        ? "border-violet-500 bg-violet-500/10"
+                                                        : "border-white/10 hover:border-white/20"
+                                                    }`}
+                                            >
+                                                <div className="text-3xl mb-2">{docType.icon}</div>
+                                                <div className="text-sm font-medium">{docType.name}</div>
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+
+                                {/* File Upload */}
+                                <motion.div variants={itemVariants}>
+                                    <label className="block text-sm text-white/60 mb-3">Upload Document</label>
+                                    <motion.div
+                                        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                                        onDragLeave={() => setIsDragOver(false)}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        whileHover={{ scale: 1.01 }}
+                                        className={`relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${isDragOver
+                                                ? "border-violet-500 bg-violet-500/10"
+                                                : uploadedFile
+                                                    ? "border-emerald-500/50 bg-emerald-500/5"
+                                                    : "border-white/10 hover:border-white/20"
+                                            }`}
+                                    >
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                                        />
+
+                                        {uploadedFile ? (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="flex flex-col items-center"
+                                            >
+                                                <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center text-3xl mb-4">
+                                                    ✓
+                                                </div>
+                                                <p className="font-medium mb-1">{uploadedFile.name}</p>
+                                                <p className="text-sm text-white/40">
+                                                    {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                                                </p>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setUploadedFile(null); }}
+                                                    className="mt-4 text-sm text-red-400 hover:underline"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </motion.div>
+                                        ) : (
+                                            <>
+                                                <motion.div
+                                                    animate={{ y: [0, -10, 0] }}
+                                                    transition={{ duration: 2, repeat: Infinity }}
+                                                    className="text-5xl mb-4"
+                                                >
+                                                    📤
+                                                </motion.div>
+                                                <p className="font-medium mb-2">Drag & drop your document here</p>
+                                                <p className="text-sm text-white/40">or click to browse files</p>
+                                                <p className="text-xs text-white/30 mt-4">
+                                                    Supported formats: JPG, PNG, PDF • Max size: 10MB
+                                                </p>
+                                            </>
+                                        )}
+                                    </motion.div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+
+                        {/* Step 2: Take Selfie */}
+                        {currentStep === 2 && (
+                            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                    Take a Selfie
+                                </motion.h2>
+                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                    Position your face within the frame and ensure good lighting
+                                </motion.p>
+
+                                <motion.div
+                                    variants={itemVariants}
+                                    className="relative aspect-video max-w-lg mx-auto rounded-2xl overflow-hidden bg-black/50 mb-8"
+                                >
+                                    {/* Camera placeholder */}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        {!selfieCapture ? (
+                                            <div className="text-center">
+                                                <motion.div
+                                                    className="w-32 h-40 border-4 border-white/30 rounded-full mx-auto mb-4"
+                                                    animate={{ borderColor: ["rgba(255,255,255,0.3)", "rgba(139,92,246,0.5)", "rgba(255,255,255,0.3)"] }}
+                                                    transition={{ duration: 2, repeat: Infinity }}
+                                                />
+                                                <p className="text-white/50 text-sm">Position your face here</p>
+
+                                                {/* Corner guides */}
+                                                <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-violet-500" />
+                                                <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-violet-500" />
+                                                <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-violet-500" />
+                                                <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-violet-500" />
+                                            </div>
+                                        ) : (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="text-center"
+                                            >
+                                                <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center text-4xl mb-4 mx-auto">
+                                                    📸
+                                                </div>
+                                                <p className="text-emerald-400 font-medium">Photo Captured!</p>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                </motion.div>
+
+                                <motion.div variants={itemVariants} className="text-center">
+                                    <motion.button
+                                        onClick={() => setSelfieCapture(!selfieCapture)}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className={selfieCapture ? "btn-secondary" : "btn-glow"}
+                                    >
+                                        {selfieCapture ? "Retake Photo" : "Capture Photo"}
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        )}
+
+                        {/* Step 3: Liveness Check */}
+                        {currentStep === 3 && (
+                            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                    Liveness Check
+                                </motion.h2>
+                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                    Follow the instructions to prove you're a real person
+                                </motion.p>
+
+                                <motion.div
+                                    variants={itemVariants}
+                                    className="relative aspect-video max-w-lg mx-auto rounded-2xl overflow-hidden bg-black/50 mb-8"
+                                >
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        {!livenessComplete ? (
+                                            <div className="text-center">
+                                                <motion.div
+                                                    className="text-6xl mb-4"
+                                                    animate={{ rotate: [0, 10, -10, 0] }}
+                                                    transition={{ duration: 2, repeat: Infinity }}
+                                                >
+                                                    👤
+                                                </motion.div>
+                                                <p className="text-white/70 font-medium mb-2">Preparing liveness check...</p>
+                                                <p className="text-white/40 text-sm">Please wait</p>
+                                            </div>
+                                        ) : (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="text-center"
+                                            >
+                                                <motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center text-4xl mb-4 mx-auto"
+                                                >
+                                                    ✓
+                                                </motion.div>
+                                                <p className="text-emerald-400 font-medium">Liveness Verified!</p>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                </motion.div>
+
+                                {/* Instructions */}
+                                <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-4 mb-8">
+                                    {[
+                                        { icon: "👁", text: "Blink twice" },
+                                        { icon: "↪️", text: "Turn head left" },
+                                        { icon: "↩️", text: "Turn head right" },
+                                    ].map((instruction, i) => (
+                                        <div key={i} className="p-4 bg-white/5 rounded-xl text-center">
+                                            <div className="text-2xl mb-2">{instruction.icon}</div>
+                                            <p className="text-sm text-white/60">{instruction.text}</p>
+                                        </div>
                                     ))}
-                                </div>
-                            </div>
+                                </motion.div>
 
-                            {/* File Upload */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-3">Upload Document</label>
-                                <div
-                                    className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${dragActive
-                                            ? 'border-indigo-500 bg-indigo-500/10'
-                                            : uploadedFile
-                                                ? 'border-emerald-500 bg-emerald-500/10'
-                                                : 'border-white/20 hover:border-white/40'
-                                        }`}
-                                    onDragEnter={handleDrag}
-                                    onDragLeave={handleDrag}
-                                    onDragOver={handleDrag}
-                                    onDrop={handleDrop}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*,.pdf"
-                                        onChange={handleFileChange}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
+                                <motion.div variants={itemVariants} className="text-center">
+                                    <motion.button
+                                        onClick={() => setLivenessComplete(!livenessComplete)}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className={livenessComplete ? "btn-secondary" : "btn-glow"}
+                                    >
+                                        {livenessComplete ? "Redo Check" : "Start Liveness Check"}
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        )}
 
-                                    {uploadedFile ? (
-                                        <div>
-                                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
+                        {/* Step 4: Review & Submit */}
+                        {currentStep === 4 && (
+                            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                    Review & Submit
+                                </motion.h2>
+                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                    Please review your submission before proceeding
+                                </motion.p>
+
+                                <motion.div variants={itemVariants} className="space-y-4 mb-8">
+                                    {[
+                                        { label: "Document Type", value: selectedDocType, status: "complete" },
+                                        { label: "Document Upload", value: uploadedFile?.name, status: "complete" },
+                                        { label: "Selfie Capture", value: "Photo captured", status: selfieCapture ? "complete" : "pending" },
+                                        { label: "Liveness Check", value: "Verified", status: livenessComplete ? "complete" : "pending" },
+                                    ].map((item, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            className="flex items-center justify-between p-4 bg-white/5 rounded-xl"
+                                        >
+                                            <div>
+                                                <p className="text-sm text-white/50">{item.label}</p>
+                                                <p className="font-medium">{item.value}</p>
                                             </div>
-                                            <p className="text-lg font-medium text-emerald-400">{uploadedFile.name}</p>
-                                            <p className="text-sm text-gray-400 mt-1">Click or drag to replace</p>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
-                                                <UploadIcon />
-                                            </div>
-                                            <p className="text-lg font-medium">Drop your file here, or click to browse</p>
-                                            <p className="text-sm text-gray-400 mt-1">Supports JPG, PNG, PDF up to 10MB</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center ${item.status === "complete"
+                                                    ? "bg-emerald-500/20 text-emerald-400"
+                                                    : "bg-amber-500/20 text-amber-400"
+                                                }`}>
+                                                {item.status === "complete" ? "✓" : "⏳"}
+                                            </span>
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
 
-                    {/* Step 2: Selfie Capture */}
-                    {currentStep === 2 && (
-                        <div className="animate-slide-up">
-                            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                                <CameraIcon />
-                                Take a Selfie
-                            </h2>
-
-                            <div className="text-center">
-                                <div className="relative w-80 h-80 mx-auto mb-6 rounded-full overflow-hidden border-4 border-indigo-500/30">
-                                    {selfieCapture ? (
-                                        <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 flex items-center justify-center">
-                                            <svg className="w-24 h-24 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                            <CameraIcon />
-                                        </div>
-                                    )}
-
-                                    {/* Face guide overlay */}
-                                    {!selfieCapture && (
-                                        <div className="absolute inset-8 border-2 border-dashed border-indigo-500/50 rounded-full" />
-                                    )}
-                                </div>
-
-                                <p className="text-gray-400 mb-6">
-                                    {selfieCapture
-                                        ? "Great! Your photo looks good."
-                                        : "Position your face within the circle and ensure good lighting."
-                                    }
-                                </p>
-
-                                <button
-                                    onClick={() => setSelfieCapture(!selfieCapture)}
-                                    className={`px-8 py-3 rounded-full font-semibold transition-all ${selfieCapture
-                                            ? 'bg-white/10 hover:bg-white/20'
-                                            : 'bg-gradient-to-r from-indigo-500 to-cyan-500 hover:opacity-90'
-                                        }`}
-                                >
-                                    {selfieCapture ? 'Retake Photo' : 'Capture Photo'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 3: Liveness Check */}
-                    {currentStep === 3 && (
-                        <div className="animate-slide-up">
-                            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                                <FaceIcon />
-                                Liveness Verification
-                            </h2>
-
-                            <div className="text-center">
-                                <div className="w-80 h-60 mx-auto mb-6 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    {livenessComplete ? (
-                                        <div className="text-center">
-                                            <svg className="w-20 h-20 mx-auto text-emerald-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <p className="text-emerald-400 font-medium">Liveness Verified!</p>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center p-6">
-                                            <FaceIcon />
-                                            <p className="text-sm text-gray-400 mt-4">Camera preview will appear here</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="max-w-md mx-auto mb-6">
-                                    <p className="text-gray-400 text-sm mb-4">
-                                        {livenessComplete
-                                            ? "Your liveness has been verified successfully."
-                                            : "Follow the on-screen instructions to prove you're a real person."
-                                        }
+                                <motion.div variants={itemVariants} className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl mb-8">
+                                    <p className="text-sm text-white/70">
+                                        <strong>Privacy Notice:</strong> Your documents are encrypted and stored on IPFS.
+                                        Only credential hashes are stored on the blockchain. You maintain full control
+                                        over your data.
                                     </p>
+                                </motion.div>
 
-                                    {!livenessComplete && (
-                                        <div className="space-y-2 text-left">
-                                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-sm">1</div>
-                                                <span className="text-sm">Blink your eyes twice</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">2</div>
-                                                <span className="text-sm text-gray-400">Turn your head slowly left</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">3</div>
-                                                <span className="text-sm text-gray-400">Turn your head slowly right</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => setLivenessComplete(!livenessComplete)}
-                                    className={`px-8 py-3 rounded-full font-semibold transition-all ${livenessComplete
-                                            ? 'bg-white/10 hover:bg-white/20'
-                                            : 'bg-gradient-to-r from-indigo-500 to-cyan-500 hover:opacity-90'
-                                        }`}
-                                >
-                                    {livenessComplete ? 'Redo Verification' : 'Start Liveness Check'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 4: Review & Submit */}
-                    {currentStep === 4 && (
-                        <div className="animate-slide-up">
-                            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                                <CheckCircleIcon />
-                                Review & Submit
-                            </h2>
-
-                            <div className="space-y-4 mb-8">
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Document Uploaded</p>
-                                            <p className="text-sm text-gray-400">{uploadedFile?.name || 'document.jpg'}</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-emerald-400 text-sm">Complete</span>
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Selfie Captured</p>
-                                            <p className="text-sm text-gray-400">Photo verified</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-emerald-400 text-sm">Complete</span>
-                                </div>
-
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Liveness Verified</p>
-                                            <p className="text-sm text-gray-400">Anti-spoofing passed</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-emerald-400 text-sm">Complete</span>
-                                </div>
-                            </div>
-
-                            <div className="p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl mb-8">
-                                <p className="text-sm text-gray-300">
-                                    <strong className="text-indigo-400">Privacy Notice:</strong> Your documents will be encrypted and stored on IPFS.
-                                    Only the verification hash will be stored on the blockchain. You maintain full control over your data.
-                                </p>
-                            </div>
-
-                            <div className="text-center">
-                                <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 text-lg px-8 py-4">
-                                    Submit for Verification
-                                    <ArrowRightIcon />
-                                </Link>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <motion.div variants={itemVariants} className="text-center">
+                                    <motion.button
+                                        onClick={handleSubmit}
+                                        disabled={isProcessing}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="btn-glow text-lg px-10 py-4"
+                                    >
+                                        {isProcessing ? (
+                                            <span className="flex items-center gap-2">
+                                                <span className="spinner" /> Processing...
+                                            </span>
+                                        ) : (
+                                            "Submit for Verification"
+                                        )}
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                <div className="flex items-center justify-between">
-                    <button
-                        onClick={prevStep}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex justify-between items-center"
+                >
+                    <motion.button
+                        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
                         disabled={currentStep === 1}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-full transition-all ${currentStep === 1
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'hover:bg-white/10'
-                            }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <ArrowLeftIcon />
                         Previous
-                    </button>
+                    </motion.button>
 
                     {currentStep < 4 && (
-                        <button
-                            onClick={nextStep}
+                        <motion.button
+                            onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
                             disabled={!canProceed()}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-full transition-all ${canProceed()
-                                    ? 'btn-primary'
-                                    : 'bg-white/10 opacity-50 cursor-not-allowed'
-                                }`}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Next Step
-                            <ArrowRightIcon />
-                        </button>
+                        </motion.button>
                     )}
-                </div>
+                </motion.div>
             </div>
         </div>
     );
