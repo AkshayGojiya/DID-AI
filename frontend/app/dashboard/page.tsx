@@ -98,7 +98,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen pt-28 px-6 pb-12">
+        <div className="min-h-screen pt-20 sm:pt-24 md:pt-28 px-4 sm:px-6 pb-8 sm:pb-12">
             <motion.div
                 className="max-w-7xl mx-auto"
                 variants={containerVariants}
@@ -106,17 +106,17 @@ export default function Dashboard() {
                 animate="visible"
             >
                 {/* Header */}
-                <motion.div variants={itemVariants} className="mb-12">
-                    <h1 className="text-4xl font-bold mb-2">
+                <motion.div variants={itemVariants} className="mb-8 sm:mb-10 md:mb-12">
+                    <h1 className="text-3xl sm:text-4xl font-bold mb-2">
                         <span className="gradient-text">Dashboard</span>
                     </h1>
-                    <p className="text-white/50">Manage your decentralized identity and credentials</p>
+                    <p className="text-white/50 text-sm sm:text-base">Manage your decentralized identity and credentials</p>
                 </motion.div>
 
                 {/* DID Card */}
                 <motion.div
                     variants={itemVariants}
-                    className="glass-card p-6 rounded-2xl mb-8 relative overflow-hidden"
+                    className="glass-card p-4 sm:p-6 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 relative overflow-hidden"
                 >
                     <motion.div
                         className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5"
@@ -125,9 +125,9 @@ export default function Dashboard() {
                     />
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-lg font-semibold">Your Decentralized Identity</h3>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <h3 className="text-base sm:text-lg font-semibold">Your Decentralized Identity</h3>
                                 <motion.span
                                     className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full flex items-center gap-1"
                                     animate={{ scale: [1, 1.05, 1] }}
@@ -137,15 +137,15 @@ export default function Dashboard() {
                                     Active
                                 </motion.span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="text-sm text-white/60 bg-white/5 px-3 py-1.5 rounded-lg font-mono">
+                            <div className="flex items-center gap-2 overflow-x-auto">
+                                <code className="text-xs sm:text-sm text-white/60 bg-white/5 px-2 sm:px-3 py-1.5 rounded-lg font-mono whitespace-nowrap">
                                     {mockDID}
                                 </code>
                                 <motion.button
                                     onClick={copyDID}
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                                     title="Copy DID"
                                 >
                                     <CopyIcon />
@@ -154,15 +154,15 @@ export default function Dashboard() {
                                     <motion.span
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="text-sm text-emerald-400"
+                                        className="text-xs sm:text-sm text-emerald-400 whitespace-nowrap"
                                     >
                                         Copied!
                                     </motion.span>
                                 )}
                             </div>
                         </div>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                            <Link href="/credentials" className="btn-primary flex items-center gap-2">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full md:w-auto">
+                            <Link href="/credentials" className="btn-primary flex items-center gap-2 justify-center text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3">
                                 <QRIcon />
                                 Share Identity
                             </Link>
@@ -173,7 +173,7 @@ export default function Dashboard() {
                 {/* Stats Grid */}
                 <motion.div
                     variants={containerVariants}
-                    className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+                    className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
                 >
                     {[
                         { label: "Verified Credentials", value: "2", icon: <VerifiedIcon />, color: "from-emerald-500 to-teal-500" },
@@ -207,16 +207,17 @@ export default function Dashboard() {
                 </motion.div>
 
                 {/* Main Content Grid */}
-                <div className="grid lg:grid-cols-3 gap-8">
+                <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
                     {/* Credentials */}
                     <motion.div variants={itemVariants} className="lg:col-span-2">
-                        <div className="glass-card p-6 rounded-2xl">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-semibold">Your Credentials</h3>
+                        <div className="glass-card p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+                            <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
+                                <h3 className="text-lg sm:text-xl font-semibold">Your Credentials</h3>
                                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                                    <Link href="/verify" className="btn-primary text-sm py-2 px-4 flex items-center gap-2">
+                                    <Link href="/verify" className="btn-primary text-xs sm:text-sm py-2 px-3 sm:px-4 flex items-center gap-1 sm:gap-2">
                                         <PlusIcon />
-                                        New Verification
+                                        <span className="hidden sm:inline">New Verification</span>
+                                        <span className="sm:hidden">New</span>
                                     </Link>
                                 </motion.div>
                             </div>
@@ -234,8 +235,8 @@ export default function Dashboard() {
                                         <div className="flex items-center gap-4">
                                             <motion.div
                                                 className={`w-12 h-12 rounded-xl flex items-center justify-center ${cred.status === 'verified'
-                                                        ? 'bg-emerald-500/20 text-emerald-400'
-                                                        : 'bg-amber-500/20 text-amber-400'
+                                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                                    : 'bg-amber-500/20 text-amber-400'
                                                     }`}
                                                 whileHover={{ rotate: 10 }}
                                             >
@@ -251,8 +252,8 @@ export default function Dashboard() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${cred.status === 'verified'
-                                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                                    : 'bg-amber-500/20 text-amber-400'
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : 'bg-amber-500/20 text-amber-400'
                                                 }`}>
                                                 {cred.status === 'verified' ? 'Verified' : 'Pending'}
                                             </span>

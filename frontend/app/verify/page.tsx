@@ -70,18 +70,18 @@ export default function VerifyPage() {
     };
 
     return (
-        <div className="min-h-screen pt-28 pb-20 px-6">
+        <div className="min-h-screen pt-20 sm:pt-24 md:pt-28 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-12"
+                    className="text-center mb-8 sm:mb-10 md:mb-12"
                 >
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 px-2">
                         <span className="gradient-text">Verify Your Identity</span>
                     </h1>
-                    <p className="text-white/60 text-lg">
+                    <p className="text-white/60 text-base sm:text-lg px-4">
                         Complete the verification process in 4 simple steps
                     </p>
                 </motion.div>
@@ -91,7 +91,7 @@ export default function VerifyPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="relative mb-12"
+                    className="relative mb-8 sm:mb-10 md:mb-12"
                 >
                     <div className="flex justify-between items-center">
                         {steps.map((step, index) => (
@@ -101,9 +101,9 @@ export default function VerifyPage() {
                                     whileHover={{ scale: 1.05 }}
                                 >
                                     <motion.div
-                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all ${currentStep >= step.id
-                                                ? "bg-gradient-to-br from-violet-500 to-cyan-500"
-                                                : "bg-white/10"
+                                        className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl md:text-2xl transition-all ${currentStep >= step.id
+                                            ? "bg-gradient-to-br from-violet-500 to-cyan-500"
+                                            : "bg-white/10"
                                             }`}
                                         animate={{
                                             scale: currentStep === step.id ? [1, 1.1, 1] : 1,
@@ -112,14 +112,15 @@ export default function VerifyPage() {
                                     >
                                         {step.icon}
                                     </motion.div>
-                                    <span className={`mt-3 text-sm font-medium ${currentStep >= step.id ? "text-white" : "text-white/40"
+                                    <span className={`mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-center ${currentStep >= step.id ? "text-white" : "text-white/40"
                                         }`}>
-                                        {step.name}
+                                        <span className="hidden sm:inline">{step.name}</span>
+                                        <span className="sm:hidden">{step.name.split(' ')[0]}</span>
                                     </span>
                                 </motion.div>
 
                                 {index < steps.length - 1 && (
-                                    <div className="absolute top-7 left-1/2 w-full h-0.5 bg-white/10">
+                                    <div className="absolute top-5 sm:top-6 md:top-7 left-1/2 w-full h-0.5 bg-white/10">
                                         <motion.div
                                             className="h-full bg-gradient-to-r from-violet-500 to-cyan-500"
                                             initial={{ width: "0%" }}
@@ -141,32 +142,32 @@ export default function VerifyPage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3 }}
-                        className="glass-card p-8 rounded-3xl mb-8"
+                        className="glass-card p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl mb-6 sm:mb-8"
                     >
                         {/* Step 1: Upload Document */}
                         {currentStep === 1 && (
                             <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                <motion.h2 variants={itemVariants} className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
                                     Select & Upload Your Document
                                 </motion.h2>
 
                                 {/* Document Type Selection */}
-                                <motion.div variants={itemVariants} className="mb-8">
+                                <motion.div variants={itemVariants} className="mb-6 sm:mb-8">
                                     <label className="block text-sm text-white/60 mb-3">Document Type</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                         {documentTypes.map((docType) => (
                                             <motion.button
                                                 key={docType.id}
                                                 onClick={() => setSelectedDocType(docType.id)}
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
-                                                className={`p-4 rounded-xl border-2 transition-all ${selectedDocType === docType.id
-                                                        ? "border-violet-500 bg-violet-500/10"
-                                                        : "border-white/10 hover:border-white/20"
+                                                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all ${selectedDocType === docType.id
+                                                    ? "border-violet-500 bg-violet-500/10"
+                                                    : "border-white/10 hover:border-white/20"
                                                     }`}
                                             >
-                                                <div className="text-3xl mb-2">{docType.icon}</div>
-                                                <div className="text-sm font-medium">{docType.name}</div>
+                                                <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">{docType.icon}</div>
+                                                <div className="text-xs sm:text-sm font-medium">{docType.name}</div>
                                             </motion.button>
                                         ))}
                                     </div>
@@ -181,11 +182,11 @@ export default function VerifyPage() {
                                         onDrop={handleDrop}
                                         onClick={() => fileInputRef.current?.click()}
                                         whileHover={{ scale: 1.01 }}
-                                        className={`relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${isDragOver
-                                                ? "border-violet-500 bg-violet-500/10"
-                                                : uploadedFile
-                                                    ? "border-emerald-500/50 bg-emerald-500/5"
-                                                    : "border-white/10 hover:border-white/20"
+                                        className={`relative border-2 border-dashed rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 text-center cursor-pointer transition-all ${isDragOver
+                                            ? "border-violet-500 bg-violet-500/10"
+                                            : uploadedFile
+                                                ? "border-emerald-500/50 bg-emerald-500/5"
+                                                : "border-white/10 hover:border-white/20"
                                             }`}
                                     >
                                         <input
@@ -221,13 +222,13 @@ export default function VerifyPage() {
                                                 <motion.div
                                                     animate={{ y: [0, -10, 0] }}
                                                     transition={{ duration: 2, repeat: Infinity }}
-                                                    className="text-5xl mb-4"
+                                                    className="text-4xl sm:text-5xl mb-3 sm:mb-4"
                                                 >
                                                     📤
                                                 </motion.div>
-                                                <p className="font-medium mb-2">Drag & drop your document here</p>
-                                                <p className="text-sm text-white/40">or click to browse files</p>
-                                                <p className="text-xs text-white/30 mt-4">
+                                                <p className="font-medium mb-2 text-sm sm:text-base">Drag & drop your document here</p>
+                                                <p className="text-xs sm:text-sm text-white/40">or click to browse files</p>
+                                                <p className="text-xs text-white/30 mt-3 sm:mt-4">
                                                     Supported formats: JPG, PNG, PDF • Max size: 10MB
                                                 </p>
                                             </>
@@ -240,16 +241,16 @@ export default function VerifyPage() {
                         {/* Step 2: Take Selfie */}
                         {currentStep === 2 && (
                             <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                <motion.h2 variants={itemVariants} className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
                                     Take a Selfie
                                 </motion.h2>
-                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                <motion.p variants={itemVariants} className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">
                                     Position your face within the frame and ensure good lighting
                                 </motion.p>
 
                                 <motion.div
                                     variants={itemVariants}
-                                    className="relative aspect-video max-w-lg mx-auto rounded-2xl overflow-hidden bg-black/50 mb-8"
+                                    className="relative aspect-video max-w-lg mx-auto rounded-xl sm:rounded-2xl overflow-hidden bg-black/50 mb-6 sm:mb-8"
                                 >
                                     {/* Camera placeholder */}
                                     <div className="absolute inset-0 flex items-center justify-center">
@@ -299,16 +300,16 @@ export default function VerifyPage() {
                         {/* Step 3: Liveness Check */}
                         {currentStep === 3 && (
                             <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                <motion.h2 variants={itemVariants} className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
                                     Liveness Check
                                 </motion.h2>
-                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                <motion.p variants={itemVariants} className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">
                                     Follow the instructions to prove you're a real person
                                 </motion.p>
 
                                 <motion.div
                                     variants={itemVariants}
-                                    className="relative aspect-video max-w-lg mx-auto rounded-2xl overflow-hidden bg-black/50 mb-8"
+                                    className="relative aspect-video max-w-lg mx-auto rounded-xl sm:rounded-2xl overflow-hidden bg-black/50 mb-6 sm:mb-8"
                                 >
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         {!livenessComplete ? (
@@ -343,15 +344,15 @@ export default function VerifyPage() {
                                 </motion.div>
 
                                 {/* Instructions */}
-                                <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-4 mb-8">
+                                <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
                                     {[
                                         { icon: "👁", text: "Blink twice" },
                                         { icon: "↪️", text: "Turn head left" },
                                         { icon: "↩️", text: "Turn head right" },
                                     ].map((instruction, i) => (
-                                        <div key={i} className="p-4 bg-white/5 rounded-xl text-center">
-                                            <div className="text-2xl mb-2">{instruction.icon}</div>
-                                            <p className="text-sm text-white/60">{instruction.text}</p>
+                                        <div key={i} className="p-3 sm:p-4 bg-white/5 rounded-lg sm:rounded-xl text-center">
+                                            <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{instruction.icon}</div>
+                                            <p className="text-xs sm:text-sm text-white/60">{instruction.text}</p>
                                         </div>
                                     ))}
                                 </motion.div>
@@ -372,14 +373,14 @@ export default function VerifyPage() {
                         {/* Step 4: Review & Submit */}
                         {currentStep === 4 && (
                             <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                <motion.h2 variants={itemVariants} className="text-2xl font-bold mb-6">
+                                <motion.h2 variants={itemVariants} className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
                                     Review & Submit
                                 </motion.h2>
-                                <motion.p variants={itemVariants} className="text-white/60 mb-8">
+                                <motion.p variants={itemVariants} className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">
                                     Please review your submission before proceeding
                                 </motion.p>
 
-                                <motion.div variants={itemVariants} className="space-y-4 mb-8">
+                                <motion.div variants={itemVariants} className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                                     {[
                                         { label: "Document Type", value: selectedDocType, status: "complete" },
                                         { label: "Document Upload", value: uploadedFile?.name, status: "complete" },
@@ -398,8 +399,8 @@ export default function VerifyPage() {
                                                 <p className="font-medium">{item.value}</p>
                                             </div>
                                             <span className={`w-8 h-8 rounded-full flex items-center justify-center ${item.status === "complete"
-                                                    ? "bg-emerald-500/20 text-emerald-400"
-                                                    : "bg-amber-500/20 text-amber-400"
+                                                ? "bg-emerald-500/20 text-emerald-400"
+                                                : "bg-amber-500/20 text-amber-400"
                                                 }`}>
                                                 {item.status === "complete" ? "✓" : "⏳"}
                                             </span>
@@ -407,8 +408,8 @@ export default function VerifyPage() {
                                     ))}
                                 </motion.div>
 
-                                <motion.div variants={itemVariants} className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl mb-8">
-                                    <p className="text-sm text-white/70">
+                                <motion.div variants={itemVariants} className="p-3 sm:p-4 bg-violet-500/10 border border-violet-500/20 rounded-lg sm:rounded-xl mb-6 sm:mb-8">
+                                    <p className="text-xs sm:text-sm text-white/70">
                                         <strong>Privacy Notice:</strong> Your documents are encrypted and stored on IPFS.
                                         Only credential hashes are stored on the blockchain. You maintain full control
                                         over your data.
@@ -421,10 +422,10 @@ export default function VerifyPage() {
                                         disabled={isProcessing}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className="btn-glow text-lg px-10 py-4"
+                                        className="btn-glow text-base sm:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 w-full sm:w-auto"
                                     >
                                         {isProcessing ? (
-                                            <span className="flex items-center gap-2">
+                                            <span className="flex items-center justify-center gap-2">
                                                 <span className="spinner" /> Processing...
                                             </span>
                                         ) : (
@@ -441,16 +442,17 @@ export default function VerifyPage() {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex justify-between items-center"
+                    className="flex justify-between items-center gap-3 sm:gap-4"
                 >
                     <motion.button
                         onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
                         disabled={currentStep === 1}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
                     >
-                        Previous
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">← Back</span>
                     </motion.button>
 
                     {currentStep < 4 && (
@@ -459,9 +461,10 @@ export default function VerifyPage() {
                             disabled={!canProceed()}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
                         >
-                            Next Step
+                            <span className="hidden sm:inline">Next Step</span>
+                            <span className="sm:hidden">Next →</span>
                         </motion.button>
                     )}
                 </motion.div>

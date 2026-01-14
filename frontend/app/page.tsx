@@ -126,7 +126,7 @@ export default function Home() {
     return (
         <div className="overflow-hidden">
             {/* Hero Section */}
-            <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-20 px-6">
+            <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-16 sm:pt-20 px-4 sm:px-6">
                 {/* Animated Background Elements */}
                 <div className="absolute inset-0 overflow-hidden">
                     <motion.div
@@ -171,7 +171,7 @@ export default function Home() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.1 }}
-                        className="text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-8"
+                        className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6 sm:mb-8 px-2"
                     >
                         <span className="block">Your Identity,</span>
                         <span className="gradient-text-animated">Your Control</span>
@@ -182,7 +182,7 @@ export default function Home() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
-                        className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12"
+                        className="text-base sm:text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-8 sm:mb-10 md:mb-12 px-4"
                     >
                         Revolutionary decentralized identity verification powered by cutting-edge AI
                         and secured by blockchain technology. Own your identity. Share with confidence.
@@ -193,16 +193,16 @@ export default function Home() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.3 }}
-                        className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+                        className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-14 md:mb-16"
                     >
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Link href="/verify" className="btn-glow flex items-center gap-2 text-lg px-8 py-4">
+                            <Link href="/verify" className="btn-glow flex items-center gap-2 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto justify-center">
                                 Start Verification
                                 <ArrowRightIcon />
                             </Link>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Link href="#how-it-works" className="btn-secondary text-lg px-8 py-4">
+                            <Link href="#how-it-works" className="btn-secondary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto text-center">
                                 Learn More
                             </Link>
                         </motion.div>
@@ -213,7 +213,7 @@ export default function Home() {
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
-                        className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
+                        className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 max-w-4xl mx-auto px-4"
                     >
                         {stats.map((stat, index) => (
                             <motion.div
@@ -270,7 +270,7 @@ export default function Home() {
             </section>
 
             {/* Features Section */}
-            <section id="features" className="py-32 px-6">
+            <section id="features" className="py-20 sm:py-24 md:py-32 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Section Header */}
                     <motion.div
@@ -278,19 +278,19 @@ export default function Home() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
                         transition={{ duration: 0.6 }}
-                        className="text-center mb-20"
+                        className="text-center mb-12 sm:mb-16 md:mb-20"
                     >
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 px-2">
                             <span className="gradient-text">Powerful Features</span>
                         </h2>
-                        <p className="text-white/50 text-lg max-w-2xl mx-auto">
+                        <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto px-4">
                             Built with the latest technologies to provide secure, fast, and user-friendly
                             identity verification.
                         </p>
                     </motion.div>
 
                     {/* Features Grid */}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                         {features.map((feature, index) => (
                             <motion.div
                                 key={index}
@@ -324,7 +324,7 @@ export default function Home() {
             </section>
 
             {/* How it Works Section */}
-            <section id="how-it-works" className="py-32 px-6 relative overflow-hidden">
+            <section id="how-it-works" className="py-20 sm:py-24 md:py-32 px-4 sm:px-6 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/5 to-transparent" />
 
                 <div className="max-w-7xl mx-auto relative z-10">
@@ -334,18 +334,18 @@ export default function Home() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
                         transition={{ duration: 0.6 }}
-                        className="text-center mb-20"
+                        className="text-center mb-12 sm:mb-16 md:mb-20"
                     >
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 px-2">
                             <span className="gradient-text">How It Works</span>
                         </h2>
-                        <p className="text-white/50 text-lg max-w-2xl mx-auto">
+                        <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto px-4">
                             Simple, secure, and seamless identity verification in just a few steps.
                         </p>
                     </motion.div>
 
                     {/* Steps */}
-                    <div className="grid md:grid-cols-4 gap-8">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
                         {[
                             { step: "01", title: "Connect Wallet", desc: "Link your MetaMask or any Web3 wallet to get started", icon: "🔗" },
                             { step: "02", title: "Upload Documents", desc: "Securely upload your identity documents for verification", icon: "📄" },
@@ -387,7 +387,7 @@ export default function Home() {
             </section>
 
             {/* CTA Section */}
-            <section className="py-32 px-6">
+            <section className="py-20 sm:py-24 md:py-32 px-4 sm:px-6">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
@@ -395,7 +395,7 @@ export default function Home() {
                     transition={{ duration: 0.6 }}
                     className="max-w-4xl mx-auto"
                 >
-                    <div className="glass-card p-12 md:p-16 rounded-3xl text-center relative overflow-hidden">
+                    <div className="glass-card p-8 sm:p-12 md:p-16 rounded-2xl sm:rounded-3xl text-center relative overflow-hidden">
                         {/* Background Glow */}
                         <motion.div
                             className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-500/10"
@@ -405,16 +405,16 @@ export default function Home() {
 
                         <div className="relative z-10">
                             <motion.h2
-                                className="text-3xl md:text-5xl font-bold mb-6"
+                                className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 px-2"
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                             >
-                                Ready to Take Control of <br />
+                                Ready to Take Control of <br className="hidden sm:block" />
                                 <span className="gradient-text-animated">Your Digital Identity?</span>
                             </motion.h2>
                             <motion.p
-                                className="text-white/50 text-lg mb-8 max-w-xl mx-auto"
+                                className="text-white/50 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 max-w-xl mx-auto px-4"
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
