@@ -122,7 +122,7 @@ export default function Navbar() {
                         transition={{ duration: 0.2 }}
                         className="fixed left-0 right-0 top-[56px] sm:top-[64px] z-40 lg:hidden w-full max-w-full overflow-hidden"
                     >
-                        <div className="mx-4 sm:mx-4 p-4 sm:p-4 glass-card rounded-xl sm:rounded-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
+                        <div className="mx-4 sm:mx-4 p-4 sm:p-4 glass-card bg-black/40 backdrop-blur rounded-xl sm:rounded-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
                             <div className="flex flex-col gap-2">
                                 {navLinks.map((link, index) => (
                                     <motion.div
