@@ -34,11 +34,11 @@ export default function Navbar() {
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? "glass-nav shadow-lg shadow-black/20" : "bg-transparent"
+                className={`fixed top-0 left-0 right-0 z-50 w-full max-w-full transition-all duration-500 ${isScrolled ? "glass-nav shadow-lg shadow-black/20" : "bg-transparent"
                     }`}
             >
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 py-3 sm:py-4 w-full">
+                    <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
                             <motion.div
@@ -120,9 +120,9 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-x-0 top-[64px] sm:top-[72px] z-40 lg:hidden"
+                        className="fixed left-0 right-0 top-[56px] sm:top-[64px] z-40 lg:hidden w-full max-w-full overflow-hidden"
                     >
-                        <div className="mx-3 sm:mx-4 p-3 sm:p-4 glass-card rounded-xl sm:rounded-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
+                        <div className="mx-4 sm:mx-4 p-4 sm:p-4 glass-card rounded-xl sm:rounded-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
                             <div className="flex flex-col gap-2">
                                 {navLinks.map((link, index) => (
                                     <motion.div
