@@ -68,3 +68,6 @@ htmlcov/
 *.tmp
 *.temp
 .cache/
+
+# ----- Documentation -----
+IMPLEMENTATION_PLAN.md
