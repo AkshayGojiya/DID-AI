@@ -1,0 +1,40 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-de90b05b36bd794053dd2f893d95867f4e563301",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/DIDRegistry.sol": "project/contracts/DIDRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": false
+    },
+    "sources": {
+      "project/contracts/DIDRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\n/**\r\n * @title DIDRegistry\r\n * @dev Decentralized Identifier (DID) Registry for managing user identities\r\n * @notice This contract allows users to register and manage their DIDs on-chain\r\n */\r\ncontract DIDRegistry {\r\n    struct DIDDocument {\r\n        address controller;      // Wallet address that controls this DID\r\n        string publicKey;        // Public key for verification\r\n        uint256 createdAt;       // Timestamp when DID was created\r\n        bool isActive;           // Whether the DID is currently active\r\n    }\r\n    \r\n    // Mapping from wallet address to DID document\r\n    mapping(address => DIDDocument) private dids;\r\n    \r\n    // Events\r\n    event DIDRegistered(address indexed owner, uint256 timestamp);\r\n    event DIDUpdated(address indexed owner, uint256 timestamp);\r\n    event DIDDeactivated(address indexed owner, uint256 timestamp);\r\n    \r\n    /**\r\n     * @dev Register a new DID for the caller\r\n     * @param _publicKey The public key to associate with this DID\r\n     */\r\n    function registerDID(string memory _publicKey) external {\r\n        require(dids[msg.sender].createdAt == 0, \"DID already exists\");\r\n        require(bytes(_publicKey).length > 0, \"Public key cannot be empty\");\r\n        \r\n        dids[msg.sender] = DIDDocument({\r\n            controller: msg.sender,\r\n            publicKey: _publicKey,\r\n            createdAt: block.timestamp,\r\n            isActive: true\r\n        });\r\n        \r\n        emit DIDRegistered(msg.sender, block.timestamp);\r\n    }\r\n    \r\n    /**\r\n     * @dev Update the public key of an existing DID\r\n     * @param _newPublicKey The new public key\r\n     */\r\n    function updateDID(string memory _newPublicKey) external {\r\n        require(dids[msg.sender].createdAt != 0, \"DID not found\");\r\n        require(dids[msg.sender].isActive, \"DID is deactivated\");\r\n        require(bytes(_newPublicKey).length > 0, \"Public key cannot be empty\");\r\n        \r\n        dids[msg.sender].publicKey = _newPublicKey;\r\n        \r\n        emit DIDUpdated(msg.sender, block.timestamp);\r\n    }\r\n    \r\n    /**\r\n     * @dev Deactivate a DID (cannot be reactivated)\r\n     */\r\n    function deactivateDID() external {\r\n        require(dids[msg.sender].createdAt != 0, \"DID not found\");\r\n        require(dids[msg.sender].isActive, \"DID already deactivated\");\r\n        \r\n        dids[msg.sender].isActive = false;\r\n        \r\n        emit DIDDeactivated(msg.sender, block.timestamp);\r\n    }\r\n    \r\n    /**\r\n     * @dev Get DID document for a specific address\r\n     * @param _owner The address to query\r\n     * @return The DID document\r\n     */\r\n    function getDID(address _owner) external view returns (DIDDocument memory) {\r\n        require(dids[_owner].createdAt != 0, \"DID not found\");\r\n        return dids[_owner];\r\n    }\r\n    \r\n    /**\r\n     * @dev Check if an address has an active DID\r\n     * @param _owner The address to check\r\n     * @return True if the address has an active DID\r\n     */\r\n    function hasDID(address _owner) external view returns (bool) {\r\n        return dids[_owner].createdAt != 0 && dids[_owner].isActive;\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}

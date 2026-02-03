@@ -1,0 +1,40 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-ca320c45fdc52fa191d855eecce63177dfc1dba0",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/CredentialRegistry.sol": "project/contracts/CredentialRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": false
+    },
+    "sources": {
+      "project/contracts/CredentialRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\n/**\r\n * @title CredentialRegistry\r\n * @dev Registry for managing verifiable credentials on-chain\r\n * @notice This contract allows issuers to issue, verify, and revoke credentials\r\n */\r\ncontract CredentialRegistry {\r\n    struct Credential {\r\n        bytes32 credentialHash;  // Hash of the credential data\r\n        address subject;         // Address of the credential holder\r\n        address issuer;          // Address of the credential issuer\r\n        uint256 issuedAt;        // Timestamp when credential was issued\r\n        uint256 expiresAt;       // Timestamp when credential expires\r\n        bool isRevoked;          // Whether the credential has been revoked\r\n    }\r\n    \r\n    // Mapping from credential hash to credential data\r\n    mapping(bytes32 => Credential) private credentials;\r\n    \r\n    // Mapping to track credentials by subject\r\n    mapping(address => bytes32[]) private subjectCredentials;\r\n    \r\n    // Events\r\n    event CredentialIssued(\r\n        bytes32 indexed credentialHash,\r\n        address indexed subject,\r\n        address indexed issuer,\r\n        uint256 expiresAt\r\n    );\r\n    event CredentialRevoked(bytes32 indexed credentialHash, uint256 timestamp);\r\n    \r\n    /**\r\n     * @dev Issue a new credential\r\n     * @param _credentialHash Hash of the credential data\r\n     * @param _subject Address of the credential holder\r\n     * @param _expiresAt Expiration timestamp\r\n     */\r\n    function issueCredential(\r\n        bytes32 _credentialHash,\r\n        address _subject,\r\n        uint256 _expiresAt\r\n    ) external {\r\n        require(_credentialHash != bytes32(0), \"Invalid credential hash\");\r\n        require(_subject != address(0), \"Invalid subject address\");\r\n        require(_expiresAt > block.timestamp, \"Expiration must be in the future\");\r\n        require(credentials[_credentialHash].issuedAt == 0, \"Credential already exists\");\r\n        \r\n        credentials[_credentialHash] = Credential({\r\n            credentialHash: _credentialHash,\r\n            subject: _subject,\r\n            issuer: msg.sender,\r\n            issuedAt: block.timestamp,\r\n            expiresAt: _expiresAt,\r\n            isRevoked: false\r\n        });\r\n        \r\n        // Track credential for subject\r\n        subjectCredentials[_subject].push(_credentialHash);\r\n        \r\n        emit CredentialIssued(_credentialHash, _subject, msg.sender, _expiresAt);\r\n    }\r\n    \r\n    /**\r\n     * @dev Verify if a credential is valid\r\n     * @param _credentialHash Hash of the credential to verify\r\n     * @return True if the credential is valid (exists, not revoked, not expired)\r\n     */\r\n    function verifyCredential(bytes32 _credentialHash) external view returns (bool) {\r\n        Credential memory cred = credentials[_credentialHash];\r\n        \r\n        return cred.issuedAt != 0 &&           // Credential exists\r\n               !cred.isRevoked &&               // Not revoked\r\n               block.timestamp < cred.expiresAt; // Not expired\r\n    }\r\n    \r\n    /**\r\n     * @dev Revoke a credential (only by issuer or subject)\r\n     * @param _credentialHash Hash of the credential to revoke\r\n     */\r\n    function revokeCredential(bytes32 _credentialHash) external {\r\n        Credential storage cred = credentials[_credentialHash];\r\n        \r\n        require(cred.issuedAt != 0, \"Credential not found\");\r\n        require(!cred.isRevoked, \"Credential already revoked\");\r\n        require(\r\n            msg.sender == cred.issuer || msg.sender == cred.subject,\r\n            \"Only issuer or subject can revoke\"\r\n        );\r\n        \r\n        cred.isRevoked = true;\r\n        \r\n        emit CredentialRevoked(_credentialHash, block.timestamp);\r\n    }\r\n    \r\n    /**\r\n     * @dev Get credential details\r\n     * @param _credentialHash Hash of the credential\r\n     * @return The credential data\r\n     */\r\n    function getCredential(bytes32 _credentialHash) external view returns (Credential memory) {\r\n        require(credentials[_credentialHash].issuedAt != 0, \"Credential not found\");\r\n        return credentials[_credentialHash];\r\n    }\r\n    \r\n    /**\r\n     * @dev Get all credentials for a subject\r\n     * @param _subject Address of the subject\r\n     * @return Array of credential hashes\r\n     */\r\n    function getSubjectCredentials(address _subject) external view returns (bytes32[] memory) {\r\n        return subjectCredentials[_subject];\r\n    }\r\n    \r\n    /**\r\n     * @dev Check if a credential is expired\r\n     * @param _credentialHash Hash of the credential\r\n     * @return True if the credential is expired\r\n     */\r\n    function isExpired(bytes32 _credentialHash) external view returns (bool) {\r\n        Credential memory cred = credentials[_credentialHash];\r\n        require(cred.issuedAt != 0, \"Credential not found\");\r\n        return block.timestamp >= cred.expiresAt;\r\n    }\r\n    \r\n    /**\r\n     * @dev Check if a credential is revoked\r\n     * @param _credentialHash Hash of the credential\r\n     * @return True if the credential is revoked\r\n     */\r\n    function isRevoked(bytes32 _credentialHash) external view returns (bool) {\r\n        Credential memory cred = credentials[_credentialHash];\r\n        require(cred.issuedAt != 0, \"Credential not found\");\r\n        return cred.isRevoked;\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
