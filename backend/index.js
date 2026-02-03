@@ -3,6 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { connectDB } = require('./config/database');
+const blockchainService = require('./services/blockchainService');
+
+// Import routes
+const { authRoutes, didRoutes } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -52,7 +56,7 @@ app.get('/', (req, res) => {
     });
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
     const mongoose = require('mongoose');
     const dbState = mongoose.connection.readyState;
     const dbStatus = {
@@ -62,22 +66,30 @@ app.get('/health', (req, res) => {
         3: 'disconnecting'
     };
 
+    // Check blockchain connection
+    const blockchainConnected = await blockchainService.isConnected();
+
     res.json({
         status: 'healthy',
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         services: {
             database: dbStatus[dbState] || 'unknown',
+            blockchain: blockchainConnected ? 'connected' : 'disconnected',
             ipfs: 'pending',
             ai: 'pending',
         },
     });
 });
 
-app.get('/api/v1/status', (req, res) => {
+app.get('/api/v1/status', async (req, res) => {
+    const blockchainInfo = await blockchainService.getProviderInfo();
+
     res.json({
         api: 'v1',
         status: 'operational',
+        blockchain: blockchainInfo,
+        contracts: blockchainService.getContractAddresses(),
         endpoints: {
             auth: '/api/v1/auth',
             did: '/api/v1/did',
@@ -89,80 +101,14 @@ app.get('/api/v1/status', (req, res) => {
 });
 
 // ===========================================
-// API Routes (Placeholders)
+// API Routes
 // ===========================================
 
-// Auth routes
-app.post('/api/v1/auth/nonce', (req, res) => {
-    const { walletAddress } = req.body;
-    if (!walletAddress) {
-        return res.status(400).json({ error: 'Wallet address is required' });
-    }
+// Auth routes (real implementation)
+app.use('/api/v1/auth', authRoutes);
 
-    // Generate a random nonce for wallet signature
-    const nonce = `Sign this message to authenticate with VerifyX: ${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    res.json({
-        success: true,
-        nonce,
-        walletAddress,
-    });
-});
-
-app.post('/api/v1/auth/verify', (req, res) => {
-    const { walletAddress, signature, nonce } = req.body;
-
-    if (!walletAddress || !signature || !nonce) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // TODO: Verify signature using ethers.js
-    // For now, return mock JWT token
-    res.json({
-        success: true,
-        token: 'mock_jwt_token_' + Date.now(),
-        user: {
-            walletAddress,
-            did: `did:ethr:${walletAddress}`,
-            createdAt: new Date().toISOString(),
-        },
-    });
-});
-
-// DID routes
-app.get('/api/v1/did/:address', (req, res) => {
-    const { address } = req.params;
-
-    res.json({
-        success: true,
-        did: {
-            id: `did:ethr:${address}`,
-            controller: address,
-            publicKey: 'mock_public_key',
-            createdAt: new Date().toISOString(),
-            status: 'active',
-        },
-    });
-});
-
-app.post('/api/v1/did/register', (req, res) => {
-    const { walletAddress, publicKey } = req.body;
-
-    if (!walletAddress) {
-        return res.status(400).json({ error: 'Wallet address is required' });
-    }
-
-    res.json({
-        success: true,
-        did: {
-            id: `did:ethr:${walletAddress}`,
-            controller: walletAddress,
-            publicKey: publicKey || 'generated_public_key',
-            createdAt: new Date().toISOString(),
-            status: 'active',
-        },
-    });
-});
+// DID routes (real implementation with blockchain)
+app.use('/api/v1/did', didRoutes);
 
 // Document routes
 app.post('/api/v1/documents/upload', (req, res) => {
