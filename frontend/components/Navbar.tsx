@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useWeb3 } from "@/contexts/Web3Context";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -20,6 +21,9 @@ export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+    // Get Web3 context
+    const { address, isConnected, isConnecting, connectWallet, disconnectWallet, error } = useWeb3();
+
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 20);
@@ -27,6 +31,11 @@ export default function Navbar() {
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    // Format wallet address for display
+    const formatAddress = (addr: string) => {
+        return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+    };
 
     return (
         <>
@@ -77,20 +86,48 @@ export default function Navbar() {
 
                         {/* CTA Buttons */}
                         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 glass rounded-full">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-xs sm:text-sm text-white/80 whitespace-nowrap">0x742d...f44e</span>
-                            </div>
+                            {/* Wallet Address Display */}
+                            {isConnected && address && (
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 glass rounded-full">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span className="text-xs sm:text-sm text-white/80 whitespace-nowrap">
+                                        {formatAddress(address)}
+                                    </span>
+                                </div>
+                            )}
 
+                            {/* Connect/Disconnect Wallet Button */}
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="hidden md:flex btn-primary items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap"
+                                onClick={isConnected ? disconnectWallet : connectWallet}
+                                disabled={isConnecting}
+                                className={`hidden md:flex items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap ${isConnected ? 'btn-secondary' : 'btn-primary'
+                                    } ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                                </svg>
-                                Connect Wallet
+                                {isConnecting ? (
+                                    <>
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Connecting...
+                                    </>
+                                ) : isConnected ? (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        Disconnect
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                        </svg>
+                                        Connect Wallet
+                                    </>
+                                )}
                             </motion.button>
 
                             {/* Mobile Menu Button */}
@@ -110,6 +147,18 @@ export default function Navbar() {
                         </div>
                     </div>
                 </div>
+
+                {/* Error Message */}
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 right-0 mt-2 mx-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-sm text-red-200"
+                    >
+                        {error}
+                    </motion.div>
+                )}
             </motion.nav>
 
             {/* Mobile Menu */}
@@ -124,6 +173,16 @@ export default function Navbar() {
                     >
                         <div className="mx-4 sm:mx-4 p-4 sm:p-4 glass-card bg-black/40 backdrop-blur rounded-xl sm:rounded-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
                             <div className="flex flex-col gap-2">
+                                {/* Wallet Status (Mobile) */}
+                                {isConnected && address && (
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                            <span className="text-sm text-white/80">{formatAddress(address)}</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {navLinks.map((link, index) => (
                                     <motion.div
                                         key={link.href}
@@ -143,13 +202,17 @@ export default function Navbar() {
                                         </Link>
                                     </motion.div>
                                 ))}
+
                                 <motion.button
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: navLinks.length * 0.05 }}
-                                    className="btn-primary mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3"
+                                    onClick={isConnected ? disconnectWallet : connectWallet}
+                                    disabled={isConnecting}
+                                    className={`mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3 ${isConnected ? 'btn-secondary' : 'btn-primary'
+                                        } ${isConnecting ? 'opacity-50' : ''}`}
                                 >
-                                    Connect Wallet
+                                    {isConnecting ? 'Connecting...' : isConnected ? 'Disconnect Wallet' : 'Connect Wallet'}
                                 </motion.button>
                             </div>
                         </div>
