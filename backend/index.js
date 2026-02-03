@@ -2,9 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const { connectDB } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+connectDB();
 
 // ===========================================
 // Middleware Configuration
@@ -49,14 +53,23 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+    const mongoose = require('mongoose');
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+    };
+
     res.json({
         status: 'healthy',
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         services: {
-            database: 'pending', // Will be updated when MongoDB is connected
-            ipfs: 'pending',     // Will be updated when IPFS is connected
-            ai: 'pending',       // Will be updated when AI service is connected
+            database: dbStatus[dbState] || 'unknown',
+            ipfs: 'pending',
+            ai: 'pending',
         },
     });
 });
