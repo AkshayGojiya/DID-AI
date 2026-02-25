@@ -6,7 +6,7 @@ const { connectDB } = require('./config/database');
 const blockchainService = require('./services/blockchainService');
 
 // Import routes
-const { authRoutes, didRoutes } = require('./routes');
+const { authRoutes, didRoutes, documentRoutes } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,6 +58,7 @@ app.get('/', (req, res) => {
 
 app.get('/health', async (req, res) => {
     const mongoose = require('mongoose');
+    const ipfsService = require('./services/ipfsService');
     const dbState = mongoose.connection.readyState;
     const dbStatus = {
         0: 'disconnected',
@@ -69,6 +70,12 @@ app.get('/health', async (req, res) => {
     // Check blockchain connection
     const blockchainConnected = await blockchainService.isConnected();
 
+    // Check IPFS (Pinata) connection
+    let ipfsConnected = false;
+    try {
+        ipfsConnected = await ipfsService.testConnection();
+    } catch { /* ignore */ }
+
     res.json({
         status: 'healthy',
         uptime: process.uptime(),
@@ -76,7 +83,7 @@ app.get('/health', async (req, res) => {
         services: {
             database: dbStatus[dbState] || 'unknown',
             blockchain: blockchainConnected ? 'connected' : 'disconnected',
-            ipfs: 'pending',
+            ipfs: ipfsConnected ? 'connected' : 'disconnected',
             ai: 'pending',
         },
     });
@@ -110,36 +117,8 @@ app.use('/api/v1/auth', authRoutes);
 // DID routes (real implementation with blockchain)
 app.use('/api/v1/did', didRoutes);
 
-// Document routes
-app.post('/api/v1/documents/upload', (req, res) => {
-    // TODO: Implement file upload with multer
-    res.json({
-        success: true,
-        message: 'Document upload endpoint - implementation pending',
-        document: {
-            id: 'doc_' + Date.now(),
-            ipfsHash: 'Qm...',
-            encryptedAt: new Date().toISOString(),
-        },
-    });
-});
-
-app.get('/api/v1/documents/:userId', (req, res) => {
-    const { userId } = req.params;
-
-    res.json({
-        success: true,
-        documents: [
-            {
-                id: 'doc_001',
-                type: 'passport',
-                status: 'verified',
-                ipfsHash: 'QmXxXxXxX...',
-                uploadedAt: new Date().toISOString(),
-            },
-        ],
-    });
-});
+// Document routes (real implementation with IPFS + encryption)
+app.use('/api/v1/documents', documentRoutes);
 
 // Verification routes
 app.post('/api/v1/verification/start', (req, res) => {

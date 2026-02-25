@@ -6,8 +6,10 @@
 
 const authRoutes = require('./auth');
 const didRoutes = require('./did');
+const documentRoutes = require('./documents');
 
 module.exports = {
     authRoutes,
-    didRoutes
+    didRoutes,
+    documentRoutes
 };

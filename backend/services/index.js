@@ -5,7 +5,9 @@
  */
 
 const blockchainService = require('./blockchainService');
+const ipfsService = require('./ipfsService');
 
 module.exports = {
-    blockchainService
+    blockchainService,
+    ipfsService
 };

@@ -15,6 +15,13 @@ const {
     getChecksumAddress
 } = require('./auth');
 
+const {
+    encryptFile,
+    decryptFile,
+    generateKeyId,
+    ALGORITHM
+} = require('./encryption');
+
 module.exports = {
     // Auth utilities
     verifySignature,
@@ -24,5 +31,11 @@ module.exports = {
     generateNonce,
     hashData,
     isValidAddress,
-    getChecksumAddress
+    getChecksumAddress,
+
+    // Encryption utilities
+    encryptFile,
+    decryptFile,
+    generateKeyId,
+    ALGORITHM
 };

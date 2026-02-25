@@ -51,7 +51,7 @@ const DocumentSchema = new mongoose.Schema({
         }
     },
 
-    // Encryption details (key stored securely, NOT the actual key)
+    // Encryption details
     encryption: {
         algorithm: {
             type: String,
@@ -64,6 +64,13 @@ const DocumentSchema = new mongoose.Schema({
         iv: {
             type: String,
             required: true
+        },
+        // Encryption key — stored here for development only.
+        // In production, use a key management service (AWS KMS, HashiCorp Vault)
+        // and only store the keyId reference.
+        _key: {
+            type: String,
+            select: false // excluded from queries by default
         }
     },
 
