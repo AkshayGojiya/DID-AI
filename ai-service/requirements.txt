@@ -9,7 +9,11 @@ gunicorn>=21.0.0
 # AI/ML Libraries
 deepface>=0.0.79
 opencv-python>=4.8.0
-tf-keras>=2.16.0
+tensorflow==2.17.1
+mediapipe==0.10.14
+
+# OCR
+pytesseract>=0.3.10
 
 # Image Processing
 Pillow>=10.0.0

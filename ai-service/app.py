@@ -12,6 +12,8 @@ from flask_cors import CORS
 from datetime import datetime
 
 from services.face_verification import FaceVerificationService
+from services.liveness_detection import LivenessDetectionService
+from services.ocr_service import OCRService
 
 # Logging
 logging.basicConfig(
@@ -57,20 +59,24 @@ def home():
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
-    face_ready = FaceVerificationService.is_ready()
+    face_ready     = FaceVerificationService.is_ready()
+    liveness_ready = LivenessDetectionService.is_ready()
+    ocr_ready      = OCRService.is_ready()
+
+    def status(ready): return 'ready' if ready else 'available (loads on first request)'
 
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'services': {
-            'face_verification': 'ready' if face_ready else 'available (loads on first request)',
-            'liveness_detection': 'mock',
-            'ocr_extraction': 'mock'
+            'face_verification':  status(face_ready),
+            'liveness_detection': status(liveness_ready),
+            'ocr_extraction':     status(ocr_ready),
         },
         'models': {
-            'deepface': 'loaded' if face_ready else 'not loaded yet',
-            'mediapipe': 'not implemented',
-            'tesseract': 'not implemented'
+            'deepface':   'loaded' if face_ready     else 'not loaded yet',
+            'mediapipe':  'loaded' if liveness_ready else 'not loaded yet',
+            'tesseract':  'loaded' if ocr_ready      else 'not loaded yet',
         }
     })
 
@@ -175,46 +181,55 @@ def detect_face():
 @app.route('/api/v1/liveness/detect', methods=['POST'])
 def detect_liveness():
     """
-    Perform liveness detection on video frames.
-    
+    Perform liveness detection on video frames using MediaPipe FaceMesh.
+
     Expected payload:
-    - frames: List of base64 encoded video frames
-    - challenge_type: 'blink', 'head_turn', 'smile'
+    - frames: List of base64 encoded video frames (min 5 recommended)
+    - challenge_type: 'blink' | 'head_left' | 'head_right' | 'smile' | 'nod'
     """
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        
+
         frames = data.get('frames', [])
         challenge_type = data.get('challenge_type', 'blink')
-        
+
         if not frames:
             return jsonify({'error': 'At least one frame is required'}), 400
-        
-        # TODO: Implement actual liveness detection using MediaPipe
-        result = {
+
+        valid_challenges = ('blink', 'head_left', 'head_right', 'smile', 'nod')
+        if challenge_type not in valid_challenges:
+            return jsonify({'error': f'Invalid challenge_type. Must be one of: {", ".join(valid_challenges)}'}), 400
+
+        result = LivenessDetectionService.detect(frames, challenge_type)
+
+        return jsonify({
             'success': True,
             'liveness': {
-                'is_live': True,
-                'confidence': 0.98,
-                'challenge_completed': True,
-                'challenge_type': challenge_type
+                'is_live':             result['is_live'],
+                'confidence':          result['confidence'],
+                'challenge_completed': result['challenge_completed'],
+                'challenge_type':      result['challenge_type'],
             },
-            'anti_spoofing': {
-                'is_real_face': True,
-                'spoof_type_detected': None,
-                'confidence': 0.96
-            },
-            'frames_analyzed': len(frames),
-            'processing_time_ms': 850,
+            'anti_spoofing': result['anti_spoofing'],
+            'details':       result.get('details'),
+            'frames_analyzed': result['frames_analyzed'],
+            'frames_with_face': result['frames_with_face'],
+            'processing_time_ms': result['processing_time_ms'],
             'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+        })
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Liveness processing error: {str(e)}',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 422
+
     except Exception as e:
+        logger.exception("Liveness detection failed")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -223,25 +238,24 @@ def detect_liveness():
 
 @app.route('/api/v1/liveness/challenge', methods=['GET'])
 def get_liveness_challenge():
-    """
-    Get a random liveness challenge for the user.
-    """
+    """Return a random liveness challenge for the client to present."""
     import random
-    
+
     challenges = [
-        {'type': 'blink', 'instruction': 'Please blink your eyes twice'},
-        {'type': 'head_left', 'instruction': 'Slowly turn your head to the left'},
+        {'type': 'blink',      'instruction': 'Please blink your eyes twice slowly'},
+        {'type': 'head_left',  'instruction': 'Slowly turn your head to the left'},
         {'type': 'head_right', 'instruction': 'Slowly turn your head to the right'},
-        {'type': 'smile', 'instruction': 'Please smile'},
-        {'type': 'nod', 'instruction': 'Nod your head up and down'}
+        {'type': 'smile',      'instruction': 'Please give a natural smile'},
+        {'type': 'nod',        'instruction': 'Nod your head up and down once'},
     ]
-    
+
     challenge = random.choice(challenges)
-    
+
     return jsonify({
         'success': True,
         'challenge': challenge,
         'timeout_seconds': 10,
+        'min_frames': 10,
         'timestamp': datetime.utcnow().isoformat()
     })
 
@@ -253,53 +267,47 @@ def get_liveness_challenge():
 @app.route('/api/v1/ocr/extract', methods=['POST'])
 def extract_document_text():
     """
-    Extract text from identity document using OCR.
-    
+    Extract text and structured fields from a document image using Tesseract OCR.
+
     Expected payload:
     - image: Base64 encoded document image
-    - document_type: 'passport', 'driving_license', 'national_id'
+    - document_type: 'passport' | 'driving_license' | 'national_id' | 'auto'
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'image' not in data:
             return jsonify({'error': 'Image is required'}), 400
-        
+
         document_type = data.get('document_type', 'auto')
-        
-        # TODO: Implement actual OCR using Tesseract
-        result = {
+
+        result = OCRService.extract(data['image'], document_type)
+
+        return jsonify({
             'success': True,
-            'document_type': document_type,
-            'extracted_data': {
-                'full_name': 'John Doe',
-                'date_of_birth': '1990-01-15',
-                'document_number': 'AB1234567',
-                'nationality': 'United States',
-                'expiry_date': '2030-01-15',
-                'issuing_authority': 'Department of State',
-                'gender': 'M',
-                'mrz_line1': 'P<USADOE<<JOHN<<<<<<<<<<<<<<<<<<<<<<<<<<<',
-                'mrz_line2': 'AB12345678USA9001151M3001150<<<<<<<<<<<04'
-            },
-            'confidence_scores': {
-                'full_name': 0.98,
-                'date_of_birth': 0.95,
-                'document_number': 0.99,
-                'nationality': 0.97,
-                'expiry_date': 0.94
-            },
-            'document_quality': {
-                'overall_score': 0.92,
-                'issues': []
-            },
-            'processing_time_ms': 2100,
+            'document_type':     result['document_type'],
+            'extracted_data':    result['extracted_data'],
+            'confidence_scores': result['confidence_scores'],
+            'document_quality':  result['quality'],
+            'mrz_found':         result['mrz_found'],
+            'checks_passed':     result['checks_passed'],
+            'checks_failed':     result['checks_failed'],
+            'ocr_confidence':    result['ocr_confidence'],
+            'processing_time_ms': result['processing_time_ms'],
             'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+        })
+
+    except RuntimeError as e:
+        # Tesseract not installed or not found
+        return jsonify({
+            'success': False,
+            'error': f'Tesseract not available: {str(e)}',
+            'hint': 'Install Tesseract and set TESSERACT_PATH in .env',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 503
+
     except Exception as e:
+        logger.exception("OCR extraction failed")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -310,34 +318,34 @@ def extract_document_text():
 def validate_document():
     """
     Validate extracted document data for consistency and authenticity.
+
+    Expected payload:
+    - extracted_data: dict returned by /ocr/extract
     """
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        
-        # TODO: Implement document validation logic
-        result = {
+
+        extracted_data = data.get('extracted_data', data)  # accept flat or nested
+
+        result = OCRService.validate(extracted_data)
+
+        return jsonify({
             'success': True,
             'validation': {
-                'is_valid': True,
-                'checks_passed': [
-                    'mrz_checksum',
-                    'expiry_date_valid',
-                    'name_format',
-                    'document_number_format'
-                ],
-                'checks_failed': [],
-                'warnings': []
+                'is_valid':    result['is_valid'],
+                'checks_passed': result['checks_passed'],
+                'checks_failed': result['checks_failed'],
+                'warnings':    result['warnings'],
             },
-            'authenticity_score': 0.95,
+            'authenticity_score': result['authenticity_score'],
             'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+        })
+
     except Exception as e:
+        logger.exception("Document validation failed")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -351,56 +359,116 @@ def validate_document():
 @app.route('/api/v1/verify/complete', methods=['POST'])
 def complete_verification():
     """
-    Perform complete verification: face match + liveness + OCR.
-    
+    Full verification pipeline: face match + liveness + OCR + validation.
+
     Expected payload:
-    - document_image: Base64 encoded ID document
-    - selfie_image: Base64 encoded selfie
-    - liveness_frames: List of base64 encoded liveness check frames
-    - document_type: Type of document
+    - document_image:   Base64 encoded ID document image
+    - selfie_image:     Base64 encoded selfie
+    - liveness_frames:  List of base64 encoded frames for liveness check
+    - challenge_type:   'blink' | 'head_left' | 'head_right' | 'smile' | 'nod'
+    - document_type:    'passport' | 'driving_license' | 'national_id' | 'auto'
     """
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        
-        # TODO: Implement complete verification pipeline
-        result = {
+
+        document_image  = data.get('document_image')
+        selfie_image    = data.get('selfie_image')
+        liveness_frames = data.get('liveness_frames', [])
+        challenge_type  = data.get('challenge_type', 'blink')
+        document_type   = data.get('document_type', 'auto')
+
+        if not document_image or not selfie_image:
+            return jsonify({'error': 'document_image and selfie_image are required'}), 400
+
+        start = datetime.utcnow()
+        errors = []
+
+        # 1. Face verification
+        try:
+            face_result = FaceVerificationService.verify_faces(document_image, selfie_image)
+            face_passed = face_result['match']
+        except Exception as e:
+            face_result = {'match': False, 'confidence': 0, 'error': str(e)}
+            face_passed = False
+            errors.append(f'face_verification: {str(e)}')
+
+        # 2. Liveness detection
+        liveness_result = None
+        liveness_passed = False
+        if liveness_frames:
+            try:
+                liveness_result = LivenessDetectionService.detect(liveness_frames, challenge_type)
+                liveness_passed = liveness_result['is_live']
+            except Exception as e:
+                liveness_result = {'is_live': False, 'confidence': 0, 'error': str(e)}
+                errors.append(f'liveness_detection: {str(e)}')
+        else:
+            liveness_result = {'is_live': None, 'note': 'No frames provided — skipped'}
+            liveness_passed = True  # don't fail pipeline if caller skips liveness
+
+        # 3. OCR extraction
+        try:
+            ocr_result = OCRService.extract(document_image, document_type)
+            ocr_passed = len(ocr_result['extracted_data']) > 0
+        except Exception as e:
+            ocr_result = {'extracted_data': {}, 'error': str(e)}
+            ocr_passed = False
+            errors.append(f'ocr_extraction: {str(e)}')
+
+        # 4. Data validation
+        validation_result = None
+        if ocr_result.get('extracted_data'):
+            try:
+                validation_result = OCRService.validate(ocr_result['extracted_data'])
+                validation_passed = validation_result['is_valid']
+            except Exception as e:
+                validation_result = {'is_valid': False, 'error': str(e)}
+                validation_passed = False
+                errors.append(f'validation: {str(e)}')
+        else:
+            validation_result = {'is_valid': False, 'note': 'No extracted data to validate'}
+            validation_passed = False
+
+        overall_passed = face_passed and liveness_passed and ocr_passed
+        elapsed_ms = int((datetime.utcnow() - start).total_seconds() * 1000)
+
+        return jsonify({
             'success': True,
-            'verification_id': f'ver_{datetime.utcnow().strftime("%Y%m%d%H%M%S")}',
-            'overall_result': 'PASSED',
+            'verification_id': f'ver_{start.strftime("%Y%m%d%H%M%S")}',
+            'overall_result': 'PASSED' if overall_passed else 'FAILED',
             'results': {
                 'face_verification': {
-                    'passed': True,
-                    'confidence': 0.95
+                    'passed':     face_passed,
+                    'confidence': face_result.get('confidence', 0),
+                    'match':      face_result.get('match', False),
                 },
                 'liveness_detection': {
-                    'passed': True,
-                    'confidence': 0.98
+                    'passed':     liveness_passed,
+                    'confidence': liveness_result.get('confidence', None),
+                    'is_live':    liveness_result.get('is_live'),
                 },
                 'document_ocr': {
-                    'passed': True,
-                    'data_extracted': True
+                    'passed':        ocr_passed,
+                    'mrz_found':     ocr_result.get('mrz_found', False),
+                    'checks_passed': ocr_result.get('checks_passed', []),
+                    'checks_failed': ocr_result.get('checks_failed', []),
                 },
                 'document_validation': {
-                    'passed': True,
-                    'authenticity_score': 0.95
+                    'passed':             validation_passed,
+                    'authenticity_score': validation_result.get('authenticity_score', 0) if validation_result else 0,
                 }
             },
-            'extracted_data': {
-                'full_name': 'John Doe',
-                'date_of_birth': '1990-01-15',
-                'nationality': 'United States',
-                'document_number': 'AB1234567'
-            },
-            'processing_time_ms': 4500,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+            'extracted_data': ocr_result.get('extracted_data', {}),
+            'errors': errors,
+            'processing_time_ms': elapsed_ms,
+            'timestamp': start.isoformat()
+        })
+
     except Exception as e:
+        logger.exception("Complete verification failed")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -463,9 +531,11 @@ if __name__ == '__main__':
     ╚═══════════════════════════════════════════════╝
     """)
 
-    # Pre-load the face verification model so first request is fast.
-    # Set WARMUP_MODELS=false to skip this and load lazily instead.
+    # Pre-load all models so the first real request is fast.
+    # Set WARMUP_MODELS=false to skip and load lazily instead.
     if os.getenv('WARMUP_MODELS', 'true').lower() == 'true':
         FaceVerificationService.warmup()
+        LivenessDetectionService.warmup()
+        OCRService.warmup()
 
     app.run(host='0.0.0.0', port=port, debug=debug)
