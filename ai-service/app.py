@@ -6,9 +6,19 @@ Provides face verification, liveness detection, and OCR capabilities.
 """
 
 import os
+import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from datetime import datetime
+
+from services.face_verification import FaceVerificationService
+
+# Logging
+logging.basicConfig(
+    level=os.getenv('LOG_LEVEL', 'INFO'),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -47,18 +57,20 @@ def home():
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
+    face_ready = FaceVerificationService.is_ready()
+
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'services': {
-            'face_verification': 'ready',
-            'liveness_detection': 'ready',
-            'ocr_extraction': 'ready'
+            'face_verification': 'ready' if face_ready else 'available (loads on first request)',
+            'liveness_detection': 'mock',
+            'ocr_extraction': 'mock'
         },
         'models': {
-            'deepface': 'loaded',  # Will be actual status when implemented
-            'mediapipe': 'loaded',
-            'tesseract': 'available'
+            'deepface': 'loaded' if face_ready else 'not loaded yet',
+            'mediapipe': 'not implemented',
+            'tesseract': 'not implemented'
         }
     })
 
@@ -71,45 +83,48 @@ def health_check():
 def verify_face():
     """
     Compare two face images and return similarity score.
-    
+
     Expected payload:
     - document_image: Base64 encoded image from ID document
     - selfie_image: Base64 encoded selfie image
     """
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        
+
         document_image = data.get('document_image')
         selfie_image = data.get('selfie_image')
-        
+
         if not document_image or not selfie_image:
             return jsonify({'error': 'Both document_image and selfie_image are required'}), 400
-        
-        # TODO: Implement actual face verification using DeepFace
-        # For now, return mock response
-        result = {
+
+        verification = FaceVerificationService.verify_faces(document_image, selfie_image)
+
+        return jsonify({
             'success': True,
             'verification': {
-                'match': True,
-                'confidence': 0.95,
-                'threshold': 0.80,
-                'model': 'ArcFace',
-                'distance_metric': 'cosine'
+                'match': verification['match'],
+                'confidence': verification['confidence'],
+                'threshold': verification['threshold'],
+                'model': verification['model'],
+                'distance_metric': verification['distance_metric']
             },
-            'faces_detected': {
-                'document': 1,
-                'selfie': 1
-            },
-            'processing_time_ms': 1250,
+            'processing_time_ms': verification['processing_time_ms'],
             'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+        })
+
+    except ValueError as e:
+        # Face not detected or image decode error
+        return jsonify({
+            'success': False,
+            'error': f'Face processing error: {str(e)}',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 422
+
     except Exception as e:
+        logger.exception("Face verification failed")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -124,38 +139,29 @@ def detect_face():
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'image' not in data:
             return jsonify({'error': 'Image is required'}), 400
-        
-        # TODO: Implement actual face detection
-        result = {
+
+        detection = FaceVerificationService.detect_faces(data['image'])
+
+        return jsonify({
             'success': True,
-            'faces_detected': 1,
-            'faces': [
-                {
-                    'bounding_box': {
-                        'x': 100,
-                        'y': 80,
-                        'width': 200,
-                        'height': 250
-                    },
-                    'confidence': 0.99,
-                    'landmarks': {
-                        'left_eye': [150, 140],
-                        'right_eye': [250, 140],
-                        'nose': [200, 190],
-                        'left_mouth': [160, 250],
-                        'right_mouth': [240, 250]
-                    }
-                }
-            ],
+            'faces_detected': detection['faces_detected'],
+            'faces': detection['faces'],
+            'processing_time_ms': detection['processing_time_ms'],
             'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        return jsonify(result)
-        
+        })
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Face detection error: {str(e)}',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 422
+
     except Exception as e:
+        logger.exception("Face detection failed")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -439,7 +445,7 @@ def internal_error(e):
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8000))
     debug = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
-    
+
     print(f"""
     ╔═══════════════════════════════════════════════╗
     ║                                               ║
@@ -456,5 +462,10 @@ if __name__ == '__main__':
     ║                                               ║
     ╚═══════════════════════════════════════════════╝
     """)
-    
+
+    # Pre-load the face verification model so first request is fast.
+    # Set WARMUP_MODELS=false to skip this and load lazily instead.
+    if os.getenv('WARMUP_MODELS', 'true').lower() == 'true':
+        FaceVerificationService.warmup()
+
     app.run(host='0.0.0.0', port=port, debug=debug)
