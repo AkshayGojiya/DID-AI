@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ParticleBackground from "@/components/ParticleBackground";
+import Providers from "@/components/Providers";
 
 const inter = Inter({
     variable: "--font-inter",
@@ -63,16 +64,18 @@ export default function RootLayout({
                 <div className="orb orb-accent hidden md:block w-[200px] h-[200px] md:w-[300px] md:h-[300px] lg:w-[400px] lg:h-[400px] bottom-[10%] left-[10%] animate-float-reverse fixed z-0" />
                 <div className="orb orb-primary hidden lg:block w-[200px] h-[200px] lg:w-[300px] lg:h-[300px] bottom-[30%] right-[20%] animate-float fixed z-0" style={{ animationDelay: '4s' }} />
 
-                {/* Navigation */}
-                <Navbar />
+                <Providers>
+                    {/* Navigation */}
+                    <Navbar />
 
-                {/* Main Content */}
-                <main className="relative z-10 min-h-screen">
-                    {children}
-                </main>
+                    {/* Main Content */}
+                    <main className="relative z-10 min-h-screen">
+                        {children}
+                    </main>
 
-                {/* Footer */}
-                <Footer />
+                    {/* Footer */}
+                    <Footer />
+                </Providers>
             </body>
         </html>
     );

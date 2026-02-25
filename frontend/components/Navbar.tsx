@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useWeb3 } from "@/contexts/Web3Context";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -15,18 +16,118 @@ const navLinks = [
     { href: "/settings", label: "Settings" },
 ];
 
+/** Shorten 0x742d35Cc...f44e → 0x742d...f44e */
+function truncateAddress(addr: string): string {
+    return addr.slice(0, 6) + "..." + addr.slice(-4);
+}
+
 export default function Navbar() {
     const pathname = usePathname();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [loginError, setLoginError] = useState<string | null>(null);
+
+    const {
+        address,
+        isConnecting,
+        isAuthenticated,
+        connectWallet,
+        disconnectWallet,
+        login,
+    } = useWeb3();
 
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
-        };
+        const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    // Auto-login (sign nonce) once wallet is connected but JWT is not yet present
+    useEffect(() => {
+        if (address && !isAuthenticated) {
+            login().catch((err) => {
+                console.error("Auto-login failed:", err);
+                setLoginError("Sign-in cancelled or failed. Click your address to retry.");
+            });
+        }
+    }, [address, isAuthenticated, login]);
+
+    const handleConnect = async () => {
+        setLoginError(null);
+        await connectWallet();
+    };
+
+    const handleRetryLogin = async () => {
+        setLoginError(null);
+        try {
+            await login();
+        } catch (err: any) {
+            setLoginError(err?.message ?? "Sign-in failed");
+        }
+    };
+
+    // ---- Wallet button content ----
+    const WalletButton = ({ mobile = false }: { mobile?: boolean }) => {
+        const base = mobile
+            ? "btn-primary mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3 w-full"
+            : "hidden md:flex btn-primary items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap";
+
+        if (isConnecting) {
+            return (
+                <motion.button disabled className={base} style={{ opacity: 0.7 }}>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Connecting...
+                </motion.button>
+            );
+        }
+
+        if (address && isAuthenticated) {
+            return (
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={disconnectWallet}
+                    className={base}
+                >
+                    Disconnect
+                </motion.button>
+            );
+        }
+
+        if (address && !isAuthenticated) {
+            // Wallet connected, waiting for signature / sign-in failed
+            return (
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleRetryLogin}
+                    className={base}
+                    title="Click to sign in"
+                >
+                    <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse" />
+                    Sign In
+                </motion.button>
+            );
+        }
+
+        return (
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleConnect}
+                className={base}
+            >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+                Connect Wallet
+            </motion.button>
+        );
+    };
 
     return (
         <>
@@ -34,8 +135,7 @@ export default function Navbar() {
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className={`fixed top-0 left-0 right-0 z-50 w-full max-w-full transition-all duration-500 ${isScrolled ? "glass-nav shadow-lg shadow-black/20" : "bg-transparent"
-                    }`}
+                className={`fixed top-0 left-0 right-0 z-50 w-full max-w-full transition-all duration-500 ${isScrolled ? "glass-nav shadow-lg shadow-black/20" : "bg-transparent"}`}
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 py-3 sm:py-4 w-full">
                     <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
@@ -60,8 +160,7 @@ export default function Navbar() {
                                     href={link.href}
                                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${pathname === link.href
                                         ? "text-white"
-                                        : "text-white/60 hover:text-white"
-                                        }`}
+                                        : "text-white/60 hover:text-white"}`}
                                 >
                                     {pathname === link.href && (
                                         <motion.div
@@ -77,21 +176,17 @@ export default function Navbar() {
 
                         {/* CTA Buttons */}
                         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 glass rounded-full">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-xs sm:text-sm text-white/80 whitespace-nowrap">0x742d...f44e</span>
-                            </div>
+                            {/* Address pill — shown when authenticated */}
+                            {address && isAuthenticated && (
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 glass rounded-full">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span className="text-xs sm:text-sm text-white/80 whitespace-nowrap">
+                                        {truncateAddress(address)}
+                                    </span>
+                                </div>
+                            )}
 
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="hidden md:flex btn-primary items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                                </svg>
-                                Connect Wallet
-                            </motion.button>
+                            <WalletButton />
 
                             {/* Mobile Menu Button */}
                             <button
@@ -109,6 +204,13 @@ export default function Navbar() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Login error banner */}
+                    {loginError && (
+                        <div className="mt-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-300">
+                            {loginError}
+                        </div>
+                    )}
                 </div>
             </motion.nav>
 
@@ -136,21 +238,33 @@ export default function Navbar() {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={`block px-4 py-3 rounded-xl transition-colors ${pathname === link.href
                                                 ? "bg-white/10 text-white"
-                                                : "text-white/60 hover:bg-white/5 hover:text-white"
-                                                }`}
+                                                : "text-white/60 hover:bg-white/5 hover:text-white"}`}
                                         >
                                             {link.label}
                                         </Link>
                                     </motion.div>
                                 ))}
-                                <motion.button
+
+                                {/* Mobile wallet button */}
+                                <motion.div
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: navLinks.length * 0.05 }}
-                                    className="btn-primary mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3"
                                 >
-                                    Connect Wallet
-                                </motion.button>
+                                    <WalletButton mobile />
+                                </motion.div>
+
+                                {/* Mobile address display when authenticated */}
+                                {address && isAuthenticated && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="flex items-center gap-2 px-4 py-2 glass rounded-xl"
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span className="text-xs text-white/60 font-mono">{address}</span>
+                                    </motion.div>
+                                )}
                             </div>
                         </div>
                     </motion.div>

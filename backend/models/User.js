@@ -128,12 +128,11 @@ UserSchema.statics.findByWallet = function (walletAddress) {
     return this.findOne({ walletAddress: walletAddress.toLowerCase() });
 };
 
-// Pre-save middleware to generate DID
-UserSchema.pre('save', function (next) {
+// Pre-save middleware to generate DID (async — no next() needed in Mongoose 8.x)
+UserSchema.pre('save', async function () {
     if (!this.did && this.walletAddress) {
         this.did = `did:ethr:${this.walletAddress}`;
     }
-    next();
 });
 
 module.exports = mongoose.model('User', UserSchema);
