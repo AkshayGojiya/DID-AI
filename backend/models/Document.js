@@ -169,11 +169,11 @@ DocumentSchema.methods.markRejected = function (reason) {
 };
 
 // Don't include deleted documents by default
-DocumentSchema.pre(/^find/, function (next) {
+// Mongoose 8.x: query middleware does not receive `next` — use a plain function
+DocumentSchema.pre(/^find/, function () {
     if (!this.getOptions().includeDeleted) {
         this.where({ isDeleted: false });
     }
-    next();
 });
 
 module.exports = mongoose.model('Document', DocumentSchema);

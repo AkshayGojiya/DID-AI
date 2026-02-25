@@ -6,7 +6,7 @@ const { connectDB } = require('./config/database');
 const blockchainService = require('./services/blockchainService');
 
 // Import routes
-const { authRoutes, didRoutes, documentRoutes, credentialRoutes } = require('./routes');
+const { authRoutes, didRoutes, documentRoutes, credentialRoutes, activityRoutes } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -122,6 +122,9 @@ app.use('/api/v1/documents', documentRoutes);
 
 // Credential routes (real implementation with MongoDB)
 app.use('/api/v1/credentials', credentialRoutes);
+
+// Activity routes (aggregated event log)
+app.use('/api/v1/activity', activityRoutes);
 
 // ===========================================
 // Error Handling

@@ -150,6 +150,30 @@ export const documentsApi = {
         get(`${BACKEND}/api/v1/documents/${id}`, token),
 };
 
+// ---------- Activity API ----------
+
+export const activityApi = {
+    /** Aggregated activity log for the authenticated user */
+    list: (token: string) =>
+        get<{
+            success: boolean;
+            events: Array<{
+                id: string;
+                type: string;
+                title: string;
+                description: string;
+                date: string;
+                meta: Record<string, any>;
+            }>;
+            stats: {
+                total: number;
+                documents: number;
+                credentials: number;
+                scans: number;
+            };
+        }>(`${BACKEND}/api/v1/activity`, token),
+};
+
 // ---------- AI Service API ----------
 
 export const aiApi = {
