@@ -1,25 +1,23 @@
 """
-Liveness Detection Service
-==========================
-Real liveness detection using MediaPipe Face Mesh.
+Liveness Detection Service (OpenCV-based)
+=========================================
+Pure OpenCV implementation using Haar cascade classifiers.
+No MediaPipe / protobuf dependency.
 
 Detects:
-- Blink:      Eye Aspect Ratio (EAR) drops below threshold across frames
-- Head turn:  Nose tip shifts left/right relative to face center
-- Smile:      Mouth aspect ratio widens
-- Nod:        Nose tip shifts up/down across frames
+- Blink:      Eyes present in some frames, absent in others
+- Head turn:  Face centre X-position shifts across frames
+- Nod:        Face centre Y-position shifts across frames
+- Smile:      Face width increases (mouth opens, cheeks widen)
 
-Also performs basic anti-spoofing by checking landmark variance
-across frames (flat/screen images produce near-zero movement).
+Anti-spoofing:
+- Near-zero positional variance across frames → photo/screen spoof
 
-MediaPipe compatibility note:
-  Uses static_image_mode=True and a fresh context-managed FaceMesh
-  per request batch. This works correctly on MediaPipe 0.10+.
+Haar cascades are bundled with opencv-python — no separate download needed.
 """
 
 import base64
 import time
-import math
 import logging
 import numpy as np
 from io import BytesIO
@@ -27,96 +25,45 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-_mp = None
+# ── Module-level cascade handles (loaded once) ──
+_face_cascade = None
+_eye_cascade  = None
 
 
-def _import_mediapipe():
-    """Import mediapipe once and cache the module."""
-    global _mp
-    if _mp is None:
-        import mediapipe as mp  # raises ImportError if not installed
-        _mp = mp
-    return _mp
+def _load_cascades():
+    global _face_cascade, _eye_cascade
+    if _face_cascade is None:
+        import cv2
+        _face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
+        _eye_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_eye.xml"
+        )
+    return _face_cascade, _eye_cascade
 
 
-def _decode_base64_image(b64: str) -> np.ndarray:
-    """Decode base64 to RGB numpy array."""
-    if ',' in b64:
-        b64 = b64.split(',', 1)[1]
+def _decode_frame(b64: str) -> np.ndarray:
+    """Decode base64 → BGR numpy array (OpenCV format)."""
+    if "," in b64:
+        b64 = b64.split(",", 1)[1]
     img_bytes = base64.b64decode(b64)
-    img = Image.open(BytesIO(img_bytes)).convert('RGB')
-    return np.array(img)
-
-
-# -------------------------------------------------------
-# Landmark indices (MediaPipe 468-point face mesh)
-# -------------------------------------------------------
-LEFT_EYE_TOP    = 159   # upper eyelid centre
-LEFT_EYE_BOTTOM = 145   # lower eyelid centre
-LEFT_EYE_INNER  = 133
-LEFT_EYE_OUTER  = 33
-
-RIGHT_EYE_TOP    = 386
-RIGHT_EYE_BOTTOM = 374
-RIGHT_EYE_INNER  = 362
-RIGHT_EYE_OUTER  = 263
-
-UPPER_LIP   = 13
-LOWER_LIP   = 14
-LEFT_MOUTH  = 61
-RIGHT_MOUTH = 291
-
-NOSE_TIP     = 1
-LEFT_CHEEK   = 234
-RIGHT_CHEEK  = 454
-FOREHEAD     = 10
-CHIN         = 152
-
-
-def _lm_px(landmarks, idx, w, h):
-    """Return (x, y) pixel coords for a landmark index."""
-    lm = landmarks.landmark[idx]
-    return (lm.x * w, lm.y * h)
-
-
-def _dist(a, b):
-    return math.hypot(a[0] - b[0], a[1] - b[1])
-
-
-def _compute_ear(landmarks, w, h):
-    """Average Eye Aspect Ratio for both eyes. Low EAR = closed."""
-    l_top = _lm_px(landmarks, LEFT_EYE_TOP,    w, h)
-    l_bot = _lm_px(landmarks, LEFT_EYE_BOTTOM, w, h)
-    l_inn = _lm_px(landmarks, LEFT_EYE_INNER,  w, h)
-    l_out = _lm_px(landmarks, LEFT_EYE_OUTER,  w, h)
-    l_ear = _dist(l_top, l_bot) / max(_dist(l_inn, l_out), 1e-6)
-
-    r_top = _lm_px(landmarks, RIGHT_EYE_TOP,    w, h)
-    r_bot = _lm_px(landmarks, RIGHT_EYE_BOTTOM, w, h)
-    r_inn = _lm_px(landmarks, RIGHT_EYE_INNER,  w, h)
-    r_out = _lm_px(landmarks, RIGHT_EYE_OUTER,  w, h)
-    r_ear = _dist(r_top, r_bot) / max(_dist(r_inn, r_out), 1e-6)
-
-    return (l_ear + r_ear) / 2
-
-
-def _compute_mar(landmarks, w, h):
-    """Mouth Aspect Ratio. Higher = more open / wider smile."""
-    top   = _lm_px(landmarks, UPPER_LIP,   w, h)
-    bot   = _lm_px(landmarks, LOWER_LIP,   w, h)
-    left  = _lm_px(landmarks, LEFT_MOUTH,  w, h)
-    right = _lm_px(landmarks, RIGHT_MOUTH, w, h)
-    return _dist(top, bot) / max(_dist(left, right), 1e-6)
+    img = Image.open(BytesIO(img_bytes)).convert("RGB")
+    arr = np.array(img)
+    return arr[:, :, ::-1]   # RGB → BGR
 
 
 class LivenessDetectionService:
-    """Liveness detection via MediaPipe FaceMesh analysis across frames."""
+    """Liveness detection using OpenCV Haar cascades across multiple frames."""
 
-    EAR_BLINK_THRESHOLD  = 0.21   # EAR below this → eye closed
-    MAR_SMILE_THRESHOLD  = 0.15   # MAR above this → smiling
-    HEAD_TURN_THRESHOLD  = 0.06   # nose-x shift / face-width
-    NOD_THRESHOLD        = 0.04   # nose-y shift / face-height
-    SPOOF_VAR_THRESHOLD  = 0.001  # landmark variance; near-zero → spoof
+    # ── Tunable thresholds ──
+    FACE_SCALE        = 1.1    # detectMultiScale scaleFactor
+    FACE_NEIGHBORS    = 5      # detectMultiScale minNeighbors
+    EYE_SCALE         = 1.1
+    EYE_NEIGHBORS     = 3
+    MOTION_THRESHOLD  = 0.04   # minimum normalised face-centre shift for head/nod
+    SMILE_THRESHOLD   = 0.015  # minimum normalised face-width change for smile
+    SPOOF_VAR_THRESH  = 0.0003 # variance below this → photo/screen detected
 
     _loaded = False
 
@@ -126,180 +73,174 @@ class LivenessDetectionService:
 
     @classmethod
     def warmup(cls):
-        """Verify MediaPipe is importable and FaceMesh initialises correctly."""
+        """Load and validate cascade classifiers at startup."""
         try:
-            mp = _import_mediapipe()
-            # Actually instantiate FaceMesh to trigger model download/cache
-            with mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.5
-            ) as fm:
-                # Process a tiny dummy RGB image to confirm the model works
-                dummy = np.zeros((64, 64, 3), dtype=np.uint8)
-                fm.process(dummy)
-
+            import cv2
+            fc, ec = _load_cascades()
+            if fc.empty() or ec.empty():
+                raise RuntimeError("Haar cascade XML files not found")
+            # Smoke-test with a blank image
+            dummy = np.zeros((100, 100), dtype=np.uint8)
+            fc.detectMultiScale(dummy, cls.FACE_SCALE, cls.FACE_NEIGHBORS)
             cls._loaded = True
-            logger.info("LivenessDetectionService: MediaPipe FaceMesh ready")
-
+            logger.info("LivenessDetectionService: OpenCV Haar cascades ready")
         except Exception as e:
             cls._loaded = False
             logger.error(f"LivenessDetectionService warmup FAILED: {type(e).__name__}: {e}")
-            raise   # re-raise so caller knows why it failed
+            raise
 
     @classmethod
-    def detect(cls, frames_b64: list, challenge_type: str = 'blink') -> dict:
+    def detect(cls, frames_b64: list, challenge_type: str = "blink") -> dict:
         """
         Analyse a sequence of base64 frames for liveness.
 
         Args:
-            frames_b64:     List of base64-encoded frame images (>=5 recommended)
-            challenge_type: 'blink' | 'head_left' | 'head_right' | 'smile' | 'nod'
+            frames_b64:     List of base64-encoded frames (>=10 recommended).
+            challenge_type: 'blink' | 'head_left' | 'head_right' | 'nod' | 'smile'
 
         Returns:
-            dict with liveness result, anti-spoofing, and per-frame metrics
+            dict with is_live, confidence, challenge result, and anti-spoofing verdict.
         """
-        mp = _import_mediapipe()
+        import cv2
+        fc, ec = _load_cascades()
         cls._loaded = True
+
         start = time.time()
 
-        ear_values  = []
-        mar_values  = []
-        nose_x_vals = []
-        nose_y_vals = []
-        face_widths = []
-        face_heights = []
+        face_cx   = []   # normalised face-centre X per frame
+        face_cy   = []   # normalised face-centre Y per frame
+        face_w    = []   # normalised face width
+        eye_open  = []   # True if >=2 eyes detected
         frames_with_face = 0
+        total = len(frames_b64)
 
-        # Use FaceMesh as context manager — required for MediaPipe 0.10+
-        with mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True,      # treat every frame independently
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.5
-        ) as face_mesh:
+        for b64 in frames_b64:
+            frame = _decode_frame(b64)
+            h, w  = frame.shape[:2]
+            gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray  = cv2.equalizeHist(gray)    # improve detection in low light
 
-            for b64 in frames_b64:
-                img = _decode_base64_image(b64)
-                h, w = img.shape[:2]
+            faces = fc.detectMultiScale(
+                gray,
+                scaleFactor=cls.FACE_SCALE,
+                minNeighbors=cls.FACE_NEIGHBORS,
+                minSize=(50, 50),
+            )
 
-                results = face_mesh.process(img)
-                if not results.multi_face_landmarks:
-                    continue
+            if not len(faces):
+                eye_open.append(False)
+                continue
 
-                frames_with_face += 1
-                lm = results.multi_face_landmarks[0]
+            # Use the largest detected face
+            x, y, fw, fh = max(faces, key=lambda f: f[2] * f[3])
+            frames_with_face += 1
 
-                ear_values.append(_compute_ear(lm, w, h))
-                mar_values.append(_compute_mar(lm, w, h))
+            # Cast to Python float — detectMultiScale returns numpy.int32 values
+            face_cx.append(float((x + fw / 2) / w))
+            face_cy.append(float((y + fh / 2) / h))
+            face_w.append(float(fw / w))
 
-                nose  = _lm_px(lm, NOSE_TIP,    w, h)
-                lcheek = _lm_px(lm, LEFT_CHEEK, w, h)
-                rcheek = _lm_px(lm, RIGHT_CHEEK, w, h)
-                foreh  = _lm_px(lm, FOREHEAD,   w, h)
-                chin_p = _lm_px(lm, CHIN,        w, h)
-
-                nose_x_vals.append(nose[0])
-                nose_y_vals.append(nose[1])
-                face_widths.append(abs(rcheek[0] - lcheek[0]))
-                face_heights.append(abs(chin_p[1] - foreh[1]))
+            # Eye detection inside the upper half of the face ROI
+            roi_gray = gray[y : y + fh // 2, x : x + fw]
+            eyes = ec.detectMultiScale(
+                roi_gray,
+                scaleFactor=cls.EYE_SCALE,
+                minNeighbors=cls.EYE_NEIGHBORS,
+            )
+            eye_open.append(bool(len(eyes) >= 2))
 
         elapsed_ms = int((time.time() - start) * 1000)
-        total_frames = len(frames_b64)
 
-        # Require face in ≥40% of frames
-        if frames_with_face < max(1, total_frames * 0.4):
+        # Require face in >=40% of frames
+        if frames_with_face < max(1, total * 0.4):
             return {
-                "is_live": False,
-                "confidence": 0.0,
+                "is_live":             False,
+                "confidence":          0.0,
                 "challenge_completed": False,
-                "challenge_type": challenge_type,
-                "reason": "Face not detected in enough frames",
+                "challenge_type":      challenge_type,
+                "reason":              "Face not detected in enough frames",
                 "anti_spoofing": {
-                    "is_real_face": False,
-                    "confidence": 0.0,
-                    "spoof_type_detected": "no_face"
+                    "is_real_face":        False,
+                    "confidence":          0.0,
+                    "spoof_type_detected": "no_face",
                 },
-                "frames_analyzed": total_frames,
-                "frames_with_face": frames_with_face,
-                "processing_time_ms": elapsed_ms
+                "frames_analyzed":    total,
+                "frames_with_face":   frames_with_face,
+                "processing_time_ms": elapsed_ms,
             }
 
-        avg_fw = float(np.mean(face_widths))  if face_widths  else 1.0
-        avg_fh = float(np.mean(face_heights)) if face_heights else 1.0
-
-        # ---- Challenge evaluation ----
-        challenge_passed = False
-        challenge_conf   = 0.0
-
-        if challenge_type == 'blink':
-            if ear_values:
-                min_ear   = min(ear_values)
-                ear_range = max(ear_values) - min_ear
-                challenge_passed = min_ear < cls.EAR_BLINK_THRESHOLD and ear_range > 0.05
-                challenge_conf   = min(1.0, ear_range / 0.12)
-
-        elif challenge_type in ('head_left', 'head_right'):
-            if nose_x_vals and avg_fw > 0:
-                shift = (max(nose_x_vals) - min(nose_x_vals)) / avg_fw
-                challenge_passed = shift > cls.HEAD_TURN_THRESHOLD
-                challenge_conf   = min(1.0, shift / (cls.HEAD_TURN_THRESHOLD * 2))
-
-        elif challenge_type == 'smile':
-            if mar_values:
-                max_mar = max(mar_values)
-                mar_range = max_mar - min(mar_values)
-                challenge_passed = max_mar > cls.MAR_SMILE_THRESHOLD or mar_range > 0.04
-                challenge_conf   = min(1.0, max_mar / max(cls.MAR_SMILE_THRESHOLD, 1e-6))
-
-        elif challenge_type == 'nod':
-            if nose_y_vals and avg_fh > 0:
-                shift = (max(nose_y_vals) - min(nose_y_vals)) / avg_fh
-                challenge_passed = shift > cls.NOD_THRESHOLD
-                challenge_conf   = min(1.0, shift / (cls.NOD_THRESHOLD * 2))
-
-        challenge_conf = round(max(0.0, min(1.0, challenge_conf)), 4)
-
-        # ---- Anti-spoofing: landmark variance ----
+        # ── Anti-spoofing: positional variance ──
         is_real    = True
         spoof_conf = 0.95
         spoof_type = None
 
-        if len(nose_x_vals) >= 3:
-            x_var = float(np.var(nose_x_vals)) / (avg_fw ** 2 + 1e-9)
-            y_var = float(np.var(nose_y_vals)) / (avg_fh ** 2 + 1e-9)
-            total_var = x_var + y_var
+        if len(face_cx) >= 3:
+            var_x = float(np.var(face_cx))
+            var_y = float(np.var(face_cy))
+            total_var = var_x + var_y
 
-            if total_var < cls.SPOOF_VAR_THRESHOLD and not challenge_passed:
+            if total_var < cls.SPOOF_VAR_THRESH:
                 is_real    = False
-                spoof_conf = round(1.0 - total_var / max(cls.SPOOF_VAR_THRESHOLD, 1e-9), 4)
+                spoof_conf = round(1.0 - total_var / max(cls.SPOOF_VAR_THRESH, 1e-9), 4)
                 spoof_type = "photo_or_screen"
+
+        # ── Challenge evaluation ──
+        challenge_passed = False
+        challenge_conf   = 0.0
+
+        if challenge_type == "blink":
+            # Blink: at least one frame with eyes open AND one with eyes closed
+            if eye_open:
+                has_open   = any(eye_open)
+                has_closed = not all(eye_open)
+                challenge_passed = has_open and has_closed
+                open_ratio = sum(eye_open) / len(eye_open)
+                challenge_conf = min(1.0, abs(open_ratio - 0.5) * 2 + 0.3) if challenge_passed else open_ratio * 0.3
+
+        elif challenge_type in ("head_left", "head_right"):
+            if face_cx:
+                x_range = max(face_cx) - min(face_cx)
+                challenge_passed = bool(x_range > cls.MOTION_THRESHOLD)
+                challenge_conf   = float(min(1.0, x_range / (cls.MOTION_THRESHOLD * 2)))
+
+        elif challenge_type == "nod":
+            if face_cy:
+                y_range = max(face_cy) - min(face_cy)
+                challenge_passed = bool(y_range > cls.MOTION_THRESHOLD)
+                challenge_conf   = float(min(1.0, y_range / (cls.MOTION_THRESHOLD * 2)))
+
+        elif challenge_type == "smile":
+            if face_w:
+                w_range = max(face_w) - min(face_w)
+                challenge_passed = bool(w_range > cls.SMILE_THRESHOLD)
+                challenge_conf   = float(min(1.0, w_range / (cls.SMILE_THRESHOLD * 2)))
+
+        challenge_conf = round(max(0.0, min(1.0, challenge_conf)), 4)
 
         liveness_conf = round(
             (0.6 * challenge_conf + 0.4 * spoof_conf) if challenge_passed
             else challenge_conf * 0.5,
-            4
+            4,
         )
 
         return {
-            "is_live":             challenge_passed and is_real,
-            "confidence":          liveness_conf,
-            "challenge_completed": challenge_passed,
+            "is_live":             bool(challenge_passed and is_real),
+            "confidence":          float(liveness_conf),
+            "challenge_completed": bool(challenge_passed),
             "challenge_type":      challenge_type,
             "anti_spoofing": {
-                "is_real_face":       is_real,
-                "confidence":         spoof_conf,
-                "spoof_type_detected": spoof_type
+                "is_real_face":        bool(is_real),
+                "confidence":          float(spoof_conf),
+                "spoof_type_detected": spoof_type,
             },
             "details": {
-                "ear_min":      round(min(ear_values), 4)   if ear_values   else None,
-                "ear_max":      round(max(ear_values), 4)   if ear_values   else None,
-                "mar_max":      round(max(mar_values), 4)   if mar_values   else None,
-                "nose_x_range": round((max(nose_x_vals) - min(nose_x_vals)) / avg_fw, 4) if nose_x_vals else None,
-                "nose_y_range": round((max(nose_y_vals) - min(nose_y_vals)) / avg_fh, 4) if nose_y_vals else None,
+                "face_x_range":      round(float(max(face_cx) - min(face_cx)), 4) if face_cx else None,
+                "face_y_range":      round(float(max(face_cy) - min(face_cy)), 4) if face_cy else None,
+                "eye_open_frames":   int(sum(eye_open)),
+                "eye_closed_frames": int(sum(not e for e in eye_open)),
+                "face_width_range":  round(float(max(face_w) - min(face_w)), 4) if face_w else None,
             },
-            "frames_analyzed":   total_frames,
-            "frames_with_face":  frames_with_face,
-            "processing_time_ms": elapsed_ms
+            "frames_analyzed":    int(total),
+            "frames_with_face":   int(frames_with_face),
+            "processing_time_ms": int(elapsed_ms),
         }

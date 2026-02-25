@@ -10,7 +10,8 @@ gunicorn>=21.0.0
 deepface>=0.0.79
 opencv-python>=4.8.0
 tensorflow==2.17.1
-mediapipe==0.10.14
+# mediapipe removed — replaced with pure OpenCV liveness detection
+#   (mediapipe 0.10.14 + protobuf 4.x causes 'GetPrototype' AttributeError)
 
 # OCR
 pytesseract>=0.3.10

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useWeb3 } from "@/contexts/Web3Context";
 
 const settingsSections = [
     { id: "account", label: "Account", icon: "👤" },
@@ -13,6 +14,8 @@ const settingsSections = [
 ];
 
 export default function SettingsPage() {
+    const { address, disconnectWallet, isAuthenticated } = useWeb3();
+    const did = address ? `did:ethr:${address}` : "—";
     const [activeSection, setActiveSection] = useState("account");
     const [settings, setSettings] = useState({
         emailNotifications: true,
@@ -112,17 +115,33 @@ export default function SettingsPage() {
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-white/5 rounded-lg sm:rounded-xl gap-3">
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-xs sm:text-sm text-white/40 mb-1">Connected Wallet</p>
-                                                <p className="font-mono text-xs sm:text-sm break-all">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</p>
+                                                <p className="font-mono text-xs sm:text-sm break-all">
+                                                    {address ?? "Not connected"}
+                                                </p>
                                             </div>
-                                            <button className="btn-secondary text-xs sm:text-sm py-2 px-3 sm:px-4 flex-shrink-0 w-full sm:w-auto text-center">Disconnect</button>
+                                            {isAuthenticated && (
+                                                <button
+                                                    onClick={disconnectWallet}
+                                                    className="btn-secondary text-xs sm:text-sm py-2 px-3 sm:px-4 flex-shrink-0 w-full sm:w-auto text-center"
+                                                >
+                                                    Disconnect
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-white/5 rounded-lg sm:rounded-xl gap-3">
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-xs sm:text-sm text-white/40 mb-1">Decentralized Identity</p>
-                                                <p className="font-mono text-xs break-all">did:ethr:0x742d35Cc6634C0532925a3b844Bc454e4438f44e</p>
+                                                <p className="font-mono text-xs break-all">{did}</p>
                                             </div>
-                                            <button className="text-violet-400 text-xs sm:text-sm hover:underline flex-shrink-0">Copy</button>
+                                            {address && (
+                                                <button
+                                                    onClick={() => navigator.clipboard.writeText(did)}
+                                                    className="text-violet-400 text-xs sm:text-sm hover:underline flex-shrink-0"
+                                                >
+                                                    Copy
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

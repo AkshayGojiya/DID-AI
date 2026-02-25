@@ -6,7 +6,7 @@ const { connectDB } = require('./config/database');
 const blockchainService = require('./services/blockchainService');
 
 // Import routes
-const { authRoutes, didRoutes, documentRoutes } = require('./routes');
+const { authRoutes, didRoutes, documentRoutes, credentialRoutes } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -120,83 +120,8 @@ app.use('/api/v1/did', didRoutes);
 // Document routes (real implementation with IPFS + encryption)
 app.use('/api/v1/documents', documentRoutes);
 
-// Verification routes
-app.post('/api/v1/verification/start', (req, res) => {
-    const { userId, documentId } = req.body;
-
-    res.json({
-        success: true,
-        verification: {
-            id: 'ver_' + Date.now(),
-            userId,
-            documentId,
-            status: 'pending',
-            steps: {
-                documentUpload: 'complete',
-                faceCapture: 'pending',
-                livenessCheck: 'pending',
-                aiVerification: 'pending',
-            },
-            createdAt: new Date().toISOString(),
-        },
-    });
-});
-
-app.get('/api/v1/verification/:verificationId', (req, res) => {
-    const { verificationId } = req.params;
-
-    res.json({
-        success: true,
-        verification: {
-            id: verificationId,
-            status: 'completed',
-            result: {
-                faceMatch: { score: 0.95, passed: true },
-                liveness: { score: 0.98, passed: true },
-                documentOcr: { extracted: true, validated: true },
-            },
-            credential: {
-                hash: '0x7a2d...f44e',
-                txHash: '0xabc123...def456',
-            },
-            completedAt: new Date().toISOString(),
-        },
-    });
-});
-
-// Credentials routes
-app.get('/api/v1/credentials/:userId', (req, res) => {
-    const { userId } = req.params;
-
-    res.json({
-        success: true,
-        credentials: [
-            {
-                id: 'cred_001',
-                type: 'identity_verification',
-                status: 'active',
-                issuedAt: new Date().toISOString(),
-                expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                hash: '0x7a2d...f44e',
-                attributes: ['fullName', 'dateOfBirth', 'nationality'],
-            },
-        ],
-    });
-});
-
-app.post('/api/v1/credentials/verify', (req, res) => {
-    const { credentialId, signature, attributes } = req.body;
-
-    res.json({
-        success: true,
-        verified: true,
-        credential: {
-            id: credentialId,
-            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            attributes: attributes || ['fullName', 'nationality'],
-        },
-    });
-});
+// Credential routes (real implementation with MongoDB)
+app.use('/api/v1/credentials', credentialRoutes);
 
 // ===========================================
 // Error Handling
