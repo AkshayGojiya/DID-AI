@@ -48,11 +48,79 @@ def _get_tesseract():
 
 
 def _decode_base64_image(b64: str) -> Image.Image:
-    """Decode base64 to PIL Image."""
+    """Decode base64 to PIL Image.  Handles data-URI prefix, whitespace, padding, and PDF files."""
+    # Extract and log MIME type from data URI prefix if present
+    mime_type = None
     if ',' in b64:
+        header = b64.split(',', 1)[0]  # e.g. "data:image/jpeg;base64"
+        if ':' in header and ';' in header:
+            mime_type = header.split(':')[1].split(';')[0]
+            logger.debug(f"Detected MIME type from data URI: {mime_type}")
         b64 = b64.split(',', 1)[1]
-    img_bytes = base64.b64decode(b64)
-    return Image.open(BytesIO(img_bytes)).convert('RGB')
+
+    # Strip any whitespace / newlines that may have been injected
+    b64 = b64.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+
+    # Fix padding — base64 length must be a multiple of 4
+    missing_padding = len(b64) % 4
+    if missing_padding:
+        b64 += '=' * (4 - missing_padding)
+
+    try:
+        img_bytes = base64.b64decode(b64)
+    except Exception as e:
+        raise ValueError(f"Invalid base64 data: {e}")
+
+    if len(img_bytes) < 100:
+        raise ValueError("Image data is too small — likely not a valid image")
+
+    logger.debug(f"Decoded {len(img_bytes)} bytes, first 4 bytes: {img_bytes[:4].hex()}")
+
+    # Check if the data is a PDF (magic bytes: %PDF = 25504446)
+    if img_bytes[:4] == b'%PDF' or mime_type == 'application/pdf':
+        logger.info("Input is a PDF — converting first page to image")
+        return _pdf_to_image(img_bytes)
+
+    try:
+        return Image.open(BytesIO(img_bytes)).convert('RGB')
+    except Exception as e:
+        raise ValueError(
+            f"Cannot decode image (mime={mime_type}, size={len(img_bytes)} bytes): {e}"
+        )
+
+
+def _pdf_to_image(pdf_bytes: bytes) -> Image.Image:
+    """Convert the first page of a PDF to a PIL Image."""
+    try:
+        # Try pdf2image (requires poppler)
+        from pdf2image import convert_from_bytes
+        images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1, dpi=200)
+        if images:
+            return images[0].convert('RGB')
+    except ImportError:
+        logger.warning("pdf2image not installed — trying PyMuPDF")
+    except Exception as e:
+        logger.warning(f"pdf2image failed: {e} — trying PyMuPDF")
+
+    try:
+        # Try PyMuPDF (fitz)
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page = doc[0]
+        pix = page.get_pixmap(dpi=200)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        doc.close()
+        return img
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"PyMuPDF failed: {e}")
+
+    raise ValueError(
+        "PDF uploaded but no PDF-to-image converter is available. "
+        "Please upload a JPG or PNG image instead of a PDF, "
+        "or install 'brew install poppler' and 'pip install pdf2image'."
+    )
 
 
 # -------------------------------------------------------

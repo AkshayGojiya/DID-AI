@@ -7,9 +7,10 @@ flask-cors>=4.0.0
 gunicorn>=21.0.0
 
 # AI/ML Libraries
-deepface>=0.0.79
+deepface>=0.0.92
 opencv-python>=4.8.0
-tensorflow==2.17.1
+tensorflow>=2.18.0,<2.21.0
+tf-keras>=2.20.0
 # mediapipe removed — replaced with pure OpenCV liveness detection
 #   (mediapipe 0.10.14 + protobuf 4.x causes 'GetPrototype' AttributeError)
 
@@ -18,6 +19,7 @@ pytesseract>=0.3.10
 
 # Image Processing
 Pillow>=10.0.0
+pdf2image>=1.16.0
 
 # Utilities
 numpy>=1.26.0

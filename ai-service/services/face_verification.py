@@ -33,15 +33,75 @@ def _get_deepface():
 def _decode_base64_image(base64_str: str) -> np.ndarray:
     """
     Decode a base64 string into a numpy array (RGB).
-    Handles both raw base64 and data-URI prefixed strings.
+    Handles data-URI prefixed strings, PDFs, whitespace, and padding.
     """
-    # Strip data URI prefix if present (e.g. "data:image/jpeg;base64,...")
+    # Extract MIME type from data URI prefix if present
+    mime_type = None
     if ',' in base64_str:
+        header = base64_str.split(',', 1)[0]
+        if ':' in header and ';' in header:
+            mime_type = header.split(':')[1].split(';')[0]
+            logger.debug(f"Face verify: MIME type = {mime_type}")
         base64_str = base64_str.split(',', 1)[1]
 
-    img_bytes = base64.b64decode(base64_str)
-    img = Image.open(BytesIO(img_bytes)).convert('RGB')
+    # Strip whitespace / newlines and fix padding
+    base64_str = base64_str.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+    missing_padding = len(base64_str) % 4
+    if missing_padding:
+        base64_str += '=' * (4 - missing_padding)
+
+    try:
+        img_bytes = base64.b64decode(base64_str)
+    except Exception as e:
+        raise ValueError(f"Invalid base64 image data: {e}")
+
+    logger.debug(f"Decoded {len(img_bytes)} bytes, first 4: {img_bytes[:4].hex()}")
+
+    # Handle PDF uploads — convert first page to image
+    if img_bytes[:4] == b'%PDF' or mime_type == 'application/pdf':
+        logger.info("Face verify: input is PDF — converting first page to image")
+        img = _pdf_first_page_to_pil(img_bytes)
+        return np.array(img)
+
+    try:
+        img = Image.open(BytesIO(img_bytes)).convert('RGB')
+    except Exception as e:
+        raise ValueError(
+            f"Cannot decode image (mime={mime_type}, size={len(img_bytes)} bytes): {e}"
+        )
+
     return np.array(img)
+
+
+def _pdf_first_page_to_pil(pdf_bytes: bytes) -> Image.Image:
+    """Convert the first page of a PDF to a PIL Image."""
+    try:
+        from pdf2image import convert_from_bytes
+        images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1, dpi=200)
+        if images:
+            return images[0].convert('RGB')
+    except ImportError:
+        logger.warning("pdf2image not installed — trying PyMuPDF")
+    except Exception as e:
+        logger.warning(f"pdf2image failed: {e}")
+
+    try:
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page = doc[0]
+        pix = page.get_pixmap(dpi=200)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        doc.close()
+        return img
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"PyMuPDF failed: {e}")
+
+    raise ValueError(
+        "PDF uploaded but no PDF converter available. "
+        "Please upload a JPG or PNG image instead."
+    )
 
 
 class FaceVerificationService:

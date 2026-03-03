@@ -29,7 +29,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # CORS configuration
 CORS(app, resources={
     r"/api/*": {
-        "origins": os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000').split(','),
+        "origins": os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5001').split(','),
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }

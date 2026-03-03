@@ -28,18 +28,18 @@ router.get('/', authenticate, async (req, res) => {
             success: true,
             count: credentials.length,
             credentials: credentials.map(cred => ({
-                id:             cred._id,
-                credentialId:   cred.credentialId,
-                type:           cred.type,
-                issuer:         cred.issuer,
-                issuedAt:       cred.issuedAt,
-                expiresAt:      cred.expiresAt,
-                status:         cred.status,
-                hash:           cred.hash.value,
-                blockchain:     cred.blockchain,
-                claims:         cred.claims,
+                id: cred._id,
+                credentialId: cred.credentialId,
+                type: cred.type,
+                issuer: cred.issuer,
+                issuedAt: cred.issuedAt,
+                expiresAt: cred.expiresAt,
+                status: cred.status,
+                hash: cred.hash.value,
+                blockchain: cred.blockchain,
+                claims: cred.claims,
                 includedClaims: cred.includedClaims,
-                usage:          cred.usage,
+                usage: cred.usage,
             })),
         });
     } catch (error) {
@@ -83,15 +83,15 @@ router.get('/verify/:hash', async (req, res) => {
             success: true,
             verified: isValid,
             credential: {
-                credentialId:  credential.credentialId,
-                type:          credential.type,
-                issuer:        credential.issuer,
-                subject:       { did: credential.subject.did },
-                issuedAt:      credential.issuedAt,
-                expiresAt:     credential.expiresAt,
-                status:        credential.status,
-                claims:        sharedClaims,
-                blockchain:    credential.blockchain,
+                credentialId: credential.credentialId,
+                type: credential.type,
+                issuer: credential.issuer,
+                subject: { did: credential.subject.did },
+                issuedAt: credential.issuedAt,
+                expiresAt: credential.expiresAt,
+                status: credential.status,
+                claims: sharedClaims,
+                blockchain: credential.blockchain,
             },
         };
 
@@ -99,7 +99,7 @@ router.get('/verify/:hash', async (req, res) => {
 
         // Record verification usage in background (non-blocking)
         if (isValid) {
-            credential.recordVerification().catch(() => {});
+            credential.recordVerification().catch(() => { });
         }
     } catch (error) {
         console.error('[CREDENTIALS] Verify error:', error);
@@ -142,18 +142,18 @@ router.get('/:id', authenticate, async (req, res) => {
         res.json({
             success: true,
             credential: {
-                id:             credential._id,
-                credentialId:   credential.credentialId,
-                type:           credential.type,
-                issuer:         credential.issuer,
-                issuedAt:       credential.issuedAt,
-                expiresAt:      credential.expiresAt,
-                status:         credential.status,
-                hash:           credential.hash.value,
-                blockchain:     credential.blockchain,
-                claims:         credential.claims,
+                id: credential._id,
+                credentialId: credential.credentialId,
+                type: credential.type,
+                issuer: credential.issuer,
+                issuedAt: credential.issuedAt,
+                expiresAt: credential.expiresAt,
+                status: credential.status,
+                hash: credential.hash.value,
+                blockchain: credential.blockchain,
+                claims: credential.claims,
                 includedClaims: credential.includedClaims,
-                usage:          credential.usage,
+                usage: credential.usage,
             },
         });
     } catch (error) {
@@ -203,19 +203,19 @@ router.post('/', authenticate, async (req, res) => {
         // Create a Verification record to satisfy the FK constraint
         const oneYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
         const verification = await Verification.create({
-            userId:      req.user._id,
-            documentId:  document._id,
-            status:      'completed',
-            result:      'passed',
+            userId: req.user._id,
+            documentId: document._id,
+            status: 'completed',
+            result: 'passed',
             steps: {
                 documentUpload: { status: 'completed', completedAt: new Date() },
-                faceCapture:    { status: 'completed', completedAt: new Date() },
-                livenessCheck:  { status: 'completed', completedAt: new Date() },
+                faceCapture: { status: 'completed', completedAt: new Date() },
+                livenessCheck: { status: 'completed', completedAt: new Date() },
                 aiVerification: { status: 'completed', completedAt: new Date() },
             },
             aiResults,
             completedAt: new Date(),
-            expiresAt:   oneYear, // prevent TTL deletion
+            expiresAt: oneYear, // prevent TTL deletion
         });
 
         // Determine which claims to include
@@ -224,32 +224,55 @@ router.post('/', authenticate, async (req, res) => {
             : ['fullName', 'nationality', 'documentType', 'isOver18'];
 
         // Issue the credential
+        const issuedAt = new Date();
+        const issuerDid = 'did:ethr:verifyx';
+        const subjectDid = req.user.did || `did:ethr:${req.user.walletAddress}`;
+
+        // Generate the credential hash BEFORE create() so it passes validation
+        // (Mongoose validates required fields before pre-save hooks run)
+        const crypto = require('crypto');
+        const hashValue = crypto
+            .createHash('sha256')
+            .update(JSON.stringify({
+                issuer: issuerDid,
+                subject: subjectDid,
+                claims,
+                issuedAt: issuedAt.toISOString(),
+                expiresAt: oneYear.toISOString(),
+            }))
+            .digest('hex');
+
         const credential = await Credential.create({
             issuer: {
-                did:  'did:ethr:verifyx',
+                did: issuerDid,
                 name: 'VerifyX',
             },
             subject: {
                 userId: req.user._id,
-                did:    req.user.did || `did:ethr:${req.user.walletAddress}`,
+                did: subjectDid,
             },
             verificationId: verification._id,
             claims,
             includedClaims: claimsToInclude,
-            expiresAt:      oneYear,
+            issuedAt,
+            expiresAt: oneYear,
+            hash: {
+                algorithm: 'sha256',
+                value: hashValue,
+            },
         });
 
         // Link credential back to verification
-        verification.credential.issued      = true;
+        verification.credential.issued = true;
         verification.credential.credentialId = credential._id;
-        verification.credential.issuedAt    = new Date();
+        verification.credential.issuedAt = new Date();
         await verification.save();
 
         // Mark user as verified
         if (!req.user.verification.isVerified) {
-            req.user.verification.isVerified         = true;
-            req.user.verification.verifiedAt         = new Date();
-            req.user.verification.verificationLevel  = 'basic';
+            req.user.verification.isVerified = true;
+            req.user.verification.verifiedAt = new Date();
+            req.user.verification.verificationLevel = 'basic';
             await req.user.save();
         }
 
@@ -259,13 +282,13 @@ router.post('/', authenticate, async (req, res) => {
             success: true,
             message: 'Credential issued successfully',
             credential: {
-                id:           credential._id,
+                id: credential._id,
                 credentialId: credential.credentialId,
-                type:         credential.type,
-                issuedAt:     credential.issuedAt,
-                expiresAt:    credential.expiresAt,
-                hash:         credential.hash.value,
-                status:       credential.status,
+                type: credential.type,
+                issuedAt: credential.issuedAt,
+                expiresAt: credential.expiresAt,
+                hash: credential.hash.value,
+                status: credential.status,
             },
         });
     } catch (error) {

@@ -210,11 +210,10 @@ CredentialSchema.statics.findByHash = function (hashValue) {
 };
 
 // Pre-save: generate hash if not exists
-CredentialSchema.pre('save', function (next) {
-    if (!this.hash.value) {
+CredentialSchema.pre('save', async function () {
+    if (!this.hash || !this.hash.value) {
         this.generateHash();
     }
-    next();
 });
 
 module.exports = mongoose.model('Credential', CredentialSchema);

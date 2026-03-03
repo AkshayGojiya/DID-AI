@@ -47,9 +47,12 @@ const connectDB = async () => {
   ║  Error: ${error.message.substring(0, 35).padEnd(37)}║
   ╚═══════════════════════════════════════════════╝
         `);
+        console.error('  Full error:', error.message);
+        console.error('  MONGO_URI:', process.env.MONGO_URI ? '(set)' : '(NOT SET)');
 
-        // Exit process with failure
-        process.exit(1);
+        // Retry after 5 seconds instead of crashing
+        console.log('  ⏳ Retrying connection in 5 seconds...');
+        setTimeout(() => connectDB(), 5000);
     }
 };
 
