@@ -9,6 +9,7 @@ import { useWeb3 } from "@/contexts/Web3Context";
 const navLinks = [
     { href: "/", label: "Home" },
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/documents", label: "Documents" },
     { href: "/verify", label: "Verify" },
     { href: "/credentials", label: "Credentials" },
     { href: "/scan", label: "Scan QR" },

@@ -5,7 +5,7 @@
  */
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-const AI      = process.env.NEXT_PUBLIC_AI_SERVICE_URL || "http://localhost:8000";
+const AI = process.env.NEXT_PUBLIC_AI_SERVICE_URL || "http://localhost:8000";
 
 // ---------- helpers ----------
 
@@ -142,12 +142,47 @@ export const documentsApi = {
     },
 
     /** List user's documents */
-    list: (token: string) =>
-        get(`${BACKEND}/api/v1/documents`, token),
+    list: async (token: string) => {
+        const res = await fetch(`${BACKEND}/api/v1/documents`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        return data;
+    },
 
     /** Get a specific document */
     getById: (id: string, token: string) =>
         get(`${BACKEND}/api/v1/documents/${id}`, token),
+
+    /** Download a document (returns decrypted file as Blob) */
+    download: async (documentId: string, token: string): Promise<Blob> => {
+        const res = await fetch(`${BACKEND}/api/v1/documents/${documentId}/download`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        return await res.blob();
+    },
+
+    /** Delete a document (soft delete) */
+    delete: async (documentId: string, token: string) => {
+        const res = await fetch(`${BACKEND}/api/v1/documents/${documentId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        return data;
+    },
 };
 
 // ---------- Activity API ----------
@@ -228,7 +263,7 @@ export const aiApi = {
             processing_time_ms: number;
         }>(`${AI}/api/v1/face/verify`, {
             document_image: documentImage,
-            selfie_image:   selfieImage,
+            selfie_image: selfieImage,
         }),
 
     // ---- OCR ----
