@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWeb3 } from "@/contexts/Web3Context";
+import { authApi } from "@/lib/api";
 
-const navLinks = [
+const baseNavLinks = [
     { href: "/", label: "Home" },
     { href: "/dashboard", label: "Dashboard" },
     { href: "/documents", label: "Documents" },
@@ -22,20 +23,106 @@ function truncateAddress(addr: string): string {
     return addr.slice(0, 6) + "..." + addr.slice(-4);
 }
 
+/** Render the wallet connection button (extracted outside component to avoid re-creation during render) */
+function WalletButton({
+    mobile = false,
+    isConnecting,
+    address,
+    isAuthenticated,
+    disconnectWallet,
+    handleRetryLogin,
+    handleConnect,
+}: {
+    mobile?: boolean;
+    isConnecting: boolean;
+    address: string | null;
+    isAuthenticated: boolean;
+    disconnectWallet: () => void;
+    handleRetryLogin: () => void;
+    handleConnect: () => void;
+}) {
+    const base = mobile
+        ? "btn-primary mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3 w-full"
+        : "hidden md:flex btn-primary items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap";
+
+    if (isConnecting) {
+        return (
+            <motion.button disabled className={base} style={{ opacity: 0.7 }}>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Connecting...
+            </motion.button>
+        );
+    }
+
+    if (address && isAuthenticated) {
+        return (
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={disconnectWallet}
+                className={base}
+            >
+                Disconnect
+            </motion.button>
+        );
+    }
+
+    if (address && !isAuthenticated) {
+        return (
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleRetryLogin}
+                className={base}
+                title="Click to sign in"
+            >
+                <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse" />
+                Sign In
+            </motion.button>
+        );
+    }
+
+    return (
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleConnect}
+            className={base}
+        >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+            Connect Wallet
+        </motion.button>
+    );
+}
+
 export default function Navbar() {
     const pathname = usePathname();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [loginError, setLoginError] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const {
         address,
         isConnecting,
         isAuthenticated,
+        token,
         connectWallet,
         disconnectWallet,
         login,
     } = useWeb3();
+
+    // Build nav links — include Admin if user has admin role
+    const navLinks = useMemo(() => {
+        if (!isAdmin) return baseNavLinks;
+        return [...baseNavLinks, { href: "/admin", label: "Admin" }];
+    }, [isAdmin]);
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -53,6 +140,22 @@ export default function Navbar() {
         }
     }, [address, isAuthenticated, login]);
 
+    // Check if the authenticated user is an admin
+    useEffect(() => {
+        let cancelled = false;
+        if (token) {
+            authApi.me(token).then((data) => {
+                if (!cancelled) setIsAdmin(data?.user?.role === "admin");
+            }).catch(() => {
+                if (!cancelled) setIsAdmin(false);
+            });
+        }
+        return () => {
+            cancelled = true;
+            setIsAdmin(false);
+        };
+    }, [token]);
+
     const handleConnect = async () => {
         setLoginError(null);
         await connectWallet();
@@ -62,72 +165,18 @@ export default function Navbar() {
         setLoginError(null);
         try {
             await login();
-        } catch (err: any) {
-            setLoginError(err?.message ?? "Sign-in failed");
+        } catch (err: unknown) {
+            setLoginError(err instanceof Error ? err.message : "Sign-in failed");
         }
     };
 
-    // ---- Wallet button content ----
-    const WalletButton = ({ mobile = false }: { mobile?: boolean }) => {
-        const base = mobile
-            ? "btn-primary mt-2 text-center text-sm sm:text-base py-2.5 sm:py-3 w-full"
-            : "hidden md:flex btn-primary items-center gap-2 text-xs sm:text-sm py-2 px-4 sm:px-5 whitespace-nowrap";
-
-        if (isConnecting) {
-            return (
-                <motion.button disabled className={base} style={{ opacity: 0.7 }}>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Connecting...
-                </motion.button>
-            );
-        }
-
-        if (address && isAuthenticated) {
-            return (
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={disconnectWallet}
-                    className={base}
-                >
-                    Disconnect
-                </motion.button>
-            );
-        }
-
-        if (address && !isAuthenticated) {
-            // Wallet connected, waiting for signature / sign-in failed
-            return (
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleRetryLogin}
-                    className={base}
-                    title="Click to sign in"
-                >
-                    <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse" />
-                    Sign In
-                </motion.button>
-            );
-        }
-
-        return (
-            <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleConnect}
-                className={base}
-            >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-                Connect Wallet
-            </motion.button>
-        );
+    const walletProps = {
+        isConnecting,
+        address,
+        isAuthenticated,
+        disconnectWallet,
+        handleRetryLogin,
+        handleConnect,
     };
 
     return (
@@ -161,7 +210,7 @@ export default function Navbar() {
                                     href={link.href}
                                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${pathname === link.href
                                         ? "text-white"
-                                        : "text-white/60 hover:text-white"}`}
+                                        : "text-white/60 hover:text-white"}${link.href === "/admin" ? " text-amber-400/80 hover:text-amber-300" : ""}`}
                                 >
                                     {pathname === link.href && (
                                         <motion.div
@@ -187,7 +236,7 @@ export default function Navbar() {
                                 </div>
                             )}
 
-                            <WalletButton />
+                            <WalletButton {...walletProps} />
 
                             {/* Mobile Menu Button */}
                             <button
@@ -239,7 +288,7 @@ export default function Navbar() {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={`block px-4 py-3 rounded-xl transition-colors ${pathname === link.href
                                                 ? "bg-white/10 text-white"
-                                                : "text-white/60 hover:bg-white/5 hover:text-white"}`}
+                                                : "text-white/60 hover:bg-white/5 hover:text-white"}${link.href === "/admin" ? " text-amber-400/80" : ""}`}
                                         >
                                             {link.label}
                                         </Link>
@@ -252,7 +301,7 @@ export default function Navbar() {
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: navLinks.length * 0.05 }}
                                 >
-                                    <WalletButton mobile />
+                                    <WalletButton mobile {...walletProps} />
                                 </motion.div>
 
                                 {/* Mobile address display when authenticated */}

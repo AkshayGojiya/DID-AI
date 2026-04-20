@@ -209,6 +209,84 @@ export const activityApi = {
         }>(`${BACKEND}/api/v1/activity`, token),
 };
 
+// ---------- Verifications API (secure server-side) ----------
+
+export const verificationsApi = {
+    /** Submit verification: document + selfie + liveness frames handled server-side */
+    submit: async (formData: FormData, token: string) => {
+        const res = await fetch(`${BACKEND}/api/v1/verifications/submit`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok && res.status !== 202) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+    },
+
+    /** Poll verification status */
+    getStatus: (verificationId: string, token: string) =>
+        get<{
+            success: boolean;
+            verificationId: string;
+            status: string;
+            result: string;
+            confidence: number | null;
+            steps: Record<string, any>;
+            credential: { issued: boolean; credentialId: string | null };
+            reasons?: string[];
+        }>(`${BACKEND}/api/v1/verifications/${verificationId}/status`, token),
+
+    /** List user's verifications */
+    list: (token: string) =>
+        get(`${BACKEND}/api/v1/verifications`, token),
+};
+
+// ---------- Admin API ----------
+
+export const adminApi = {
+    /** Dashboard statistics */
+    getStats: (token: string) =>
+        get(`${BACKEND}/api/v1/admin/stats`, token),
+
+    /** List verifications with optional filters */
+    listVerifications: (token: string, params?: { status?: string; page?: number; limit?: number }) => {
+        const query = new URLSearchParams();
+        if (params?.status) query.set("status", params.status);
+        if (params?.page) query.set("page", String(params.page));
+        if (params?.limit) query.set("limit", String(params.limit));
+        const qs = query.toString();
+        return get(`${BACKEND}/api/v1/admin/verifications${qs ? `?${qs}` : ""}`, token);
+    },
+
+    /** Get full verification detail */
+    getVerification: (id: string, token: string) =>
+        get(`${BACKEND}/api/v1/admin/verifications/${id}`, token),
+
+    /** Approve a verification */
+    approveVerification: (id: string, token: string) =>
+        post(`${BACKEND}/api/v1/admin/verifications/${id}/approve`, {}, token),
+
+    /** Reject a verification with reason */
+    rejectVerification: (id: string, reason: string, token: string) =>
+        post(`${BACKEND}/api/v1/admin/verifications/${id}/reject`, { reason }, token),
+
+    /** List all users */
+    listUsers: (token: string, params?: { page?: number }) => {
+        const query = params?.page ? `?page=${params.page}` : "";
+        return get(`${BACKEND}/api/v1/admin/users${query}`, token);
+    },
+
+    /** List all credentials */
+    listCredentials: (token: string, params?: { status?: string; page?: number }) => {
+        const query = new URLSearchParams();
+        if (params?.status) query.set("status", params.status);
+        if (params?.page) query.set("page", String(params.page));
+        const qs = query.toString();
+        return get(`${BACKEND}/api/v1/admin/credentials${qs ? `?${qs}` : ""}`, token);
+    },
+};
+
 // ---------- AI Service API ----------
 
 export const aiApi = {

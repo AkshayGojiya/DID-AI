@@ -111,7 +111,7 @@ class FaceVerificationService:
     MODEL_NAME = "ArcFace"
     DETECTOR_BACKEND = "opencv"     # fast & reliable; alternatives: retinaface, mtcnn
     DISTANCE_METRIC = "cosine"
-    CONFIDENCE_THRESHOLD = 0.40     # cosine distance threshold — lower = stricter
+    CONFIDENCE_THRESHOLD = 0.65     # cosine distance threshold — lower = stricter, increased for PDF documents
 
     _model_loaded = False
 

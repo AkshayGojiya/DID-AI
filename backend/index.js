@@ -6,7 +6,7 @@ const { connectDB } = require('./config/database');
 const blockchainService = require('./services/blockchainService');
 
 // Import routes
-const { authRoutes, didRoutes, documentRoutes, credentialRoutes, activityRoutes } = require('./routes');
+const { authRoutes, didRoutes, documentRoutes, credentialRoutes, activityRoutes, verificationRoutes, adminRoutes } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,8 +33,8 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -125,6 +125,12 @@ app.use('/api/v1/credentials', credentialRoutes);
 
 // Activity routes (aggregated event log)
 app.use('/api/v1/activity', activityRoutes);
+
+// Verification routes (secure server-side AI verification)
+app.use('/api/v1/verifications', verificationRoutes);
+
+// Admin routes (verification review panel)
+app.use('/api/v1/admin', adminRoutes);
 
 // ===========================================
 // Error Handling

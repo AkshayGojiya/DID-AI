@@ -35,7 +35,7 @@ const VerificationSchema = new mongoose.Schema({
     // Overall verification status
     status: {
         type: String,
-        enum: ['initiated', 'in_progress', 'completed', 'failed', 'expired', 'cancelled'],
+        enum: ['initiated', 'in_progress', 'pending_review', 'completed', 'failed', 'expired', 'cancelled'],
         default: 'initiated'
     },
 
@@ -164,29 +164,40 @@ VerificationSchema.virtual('isExpired').get(function () {
 
 // Calculate overall confidence
 VerificationSchema.methods.calculateOverallConfidence = function () {
-    const weights = { faceMatch: 0.4, liveness: 0.35, ocr: 0.25 };
+    const weights = { faceMatch: 0.2, liveness: 0.55, ocr: 0.25 };
     let totalWeight = 0;
     let weightedSum = 0;
 
-    if (this.aiResults.faceMatch.confidence !== null) {
+    // Helper to check if value is a valid number
+    const isValidNumber = (val) => typeof val === 'number' && !isNaN(val) && isFinite(val);
+
+    if (isValidNumber(this.aiResults.faceMatch.confidence)) {
         weightedSum += this.aiResults.faceMatch.confidence * weights.faceMatch;
         totalWeight += weights.faceMatch;
     }
-    if (this.aiResults.liveness.confidence !== null) {
+    if (isValidNumber(this.aiResults.liveness.confidence)) {
         weightedSum += this.aiResults.liveness.confidence * weights.liveness;
         totalWeight += weights.liveness;
     }
-    if (this.aiResults.ocr.passed !== null) {
+    if (this.aiResults.ocr.passed !== null && this.aiResults.ocr.confidenceScores) {
         // Use average of OCR confidence scores
-        const ocrScores = Object.values(this.aiResults.ocr.confidenceScores).filter(s => s !== null);
+        const ocrScores = Object.values(this.aiResults.ocr.confidenceScores).filter(s => isValidNumber(s));
         if (ocrScores.length > 0) {
             const avgOcr = ocrScores.reduce((a, b) => a + b, 0) / ocrScores.length;
-            weightedSum += avgOcr * weights.ocr;
-            totalWeight += weights.ocr;
+            if (isValidNumber(avgOcr)) {
+                weightedSum += avgOcr * weights.ocr;
+                totalWeight += weights.ocr;
+            }
         }
     }
 
-    this.overallConfidence = totalWeight > 0 ? weightedSum / totalWeight : null;
+    // Ensure we don't set NaN - use null if calculation fails
+    if (totalWeight > 0 && isValidNumber(weightedSum)) {
+        this.overallConfidence = weightedSum / totalWeight;
+    } else {
+        this.overallConfidence = null;
+    }
+
     return this.overallConfidence;
 };
 

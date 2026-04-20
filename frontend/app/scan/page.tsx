@@ -8,7 +8,8 @@ import { credentialsApi } from "@/lib/api";
 
 interface ScannedCredential {
     credentialId: string;
-    credentialType: string;
+    type: string;
+    credentialType?: string;
     issuer: { did: string; name: string };
     subject: { did: string };
     issuedAt: string;
@@ -313,7 +314,7 @@ export default function ScanPage() {
                                             <div className="p-4 bg-white/5 rounded-xl">
                                                 <p className="text-xs text-white/40 mb-1">Credential Type</p>
                                                 <p className="font-medium">
-                                                    {scanResult.credential.credentialType?.replace(/([A-Z])/g, " $1").trim()}
+                                                    {(scanResult.credential.credentialType || scanResult.credential.type)?.replace(/([A-Z])/g, " $1").trim()}
                                                 </p>
                                             </div>
                                             <div className="p-4 bg-white/5 rounded-xl">

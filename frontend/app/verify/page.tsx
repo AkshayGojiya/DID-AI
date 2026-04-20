@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Webcam from "react-webcam";
 import { useWeb3 } from "@/contexts/Web3Context";
-import { aiApi, documentsApi, credentialsApi } from "@/lib/api";
+import { aiApi, verificationsApi } from "@/lib/api";
 
 // ─────────────────────────────────────────────
 // Types
@@ -23,6 +23,9 @@ interface VerificationResults {
     overall:      boolean;
     credentialId?: string;
     error?:       string;
+    pendingReview?: boolean;
+    verificationId?: string;
+    reasons?: string[];
 }
 
 // ─────────────────────────────────────────────
@@ -224,7 +227,7 @@ export default function VerifyPage() {
     // ─────────────────────────────────────────
 
     const handleSubmit = async () => {
-        if (!docBase64 || !selfieBase64 || !selectedDocType) return;
+        if (!uploadedFile || !selfieBase64 || !selectedDocType || !token) return;
 
         setIsProcessing(true);
         setCurrentStep(4);
@@ -237,70 +240,43 @@ export default function VerifyPage() {
         };
 
         try {
-            // 1. Upload document to IPFS
-            setProcessingStep("Uploading document to IPFS...");
-            if (uploadedFile && token) {
-                try {
-                    const formData = new FormData();
-                    formData.append("document",     uploadedFile);
-                    formData.append("documentType", selectedDocType);
-                    r.docUpload = await documentsApi.upload(formData, token);
-                } catch (e: any) {
-                    r.docUpload = { success: false, error: e.message };
-                }
+            // Build a single FormData and send everything to the backend.
+            // The backend handles: IPFS upload, face verify, OCR, scoring, and credential issuance.
+            setProcessingStep("Submitting verification to server...");
+
+            const formData = new FormData();
+            formData.append("document", uploadedFile);
+            formData.append("documentType", selectedDocType);
+            formData.append("selfieImage", selfieBase64);
+
+            // Include liveness frames if captured (for server-side re-verification)
+            if (livenessResult?.frames) {
+                formData.append("livenessFrames", JSON.stringify(livenessResult.frames));
+            }
+            if (livenessResult?.liveness?.challenge_type) {
+                formData.append("challengeType", livenessResult.liveness.challenge_type);
             }
 
-            // 2. Face verification
-            setProcessingStep("Verifying face match...");
-            try {
-                r.faceVerify = await aiApi.verifyFace(docBase64, selfieBase64);
-            } catch (e: any) {
-                r.faceVerify = { success: false, error: e.message };
-            }
+            setProcessingStep("Verifying identity (face, liveness, document)...");
+            const result = await verificationsApi.submit(formData, token);
 
-            // 3. OCR extraction
-            setProcessingStep("Extracting document data...");
-            try {
-                r.ocr = await aiApi.extractOCR(docBase64, selectedDocType);
-            } catch (e: any) {
-                r.ocr = { success: false, error: e.message };
-            }
-
-            // Overall: face must match + liveness must pass
-            const faceMatch    = r.faceVerify?.verification?.match    ?? false;
-            const livenessPass = livenessResult?.liveness?.is_live     ?? false;
-            r.overall = faceMatch && livenessPass;
-
-            // 4. Issue credential if verification passed
-            if (r.overall && token && r.docUpload?.document?.id) {
-                setProcessingStep("Issuing verifiable credential...");
-                try {
-                    const ocr = r.ocr?.extracted_data ?? {};
-                    const claims = {
-                        fullName:       ocr.full_name       ?? ocr.fullName       ?? null,
-                        dateOfBirth:    ocr.date_of_birth   ?? ocr.dateOfBirth    ?? null,
-                        nationality:    ocr.nationality     ?? null,
-                        documentType:   selectedDocType,
-                        documentNumber: ocr.document_number ?? ocr.documentNumber ?? null,
-                        isOver18:       true,
-                    };
-                    const credRes = await credentialsApi.create(
-                        {
-                            documentId:     r.docUpload.document.id,
-                            claims,
-                            includedClaims: Object.keys(claims).filter(k => (claims as any)[k] != null),
-                            aiResults: {
-                                faceMatch: { passed: faceMatch,    confidence: r.faceVerify?.verification?.confidence ?? null },
-                                liveness:  { passed: livenessPass, confidence: livenessResult?.liveness?.confidence  ?? null },
-                                ocr:       { passed: !!r.ocr?.success, dataExtracted: !!r.ocr?.extracted_data },
-                            },
-                        },
-                        token,
-                    );
-                    if (credRes.success) r.credentialId = credRes.credential.credentialId;
-                } catch {
-                    // Non-fatal: verification results still shown
-                }
+            // Map backend response to our result shape
+            if (result.status === "approved") {
+                r.overall = true;
+                r.credentialId = result.credential?.credentialId;
+                r.faceVerify = { success: true, verification: { match: true, confidence: result.confidence } };
+                r.docUpload = { success: true };
+            } else if (result.status === "pending_review") {
+                r.overall = false;
+                r.faceVerify = { success: true, verification: { match: true, confidence: result.confidence } };
+                r.docUpload = { success: true };
+                r.pendingReview = true;
+                r.verificationId = result.verificationId;
+            } else {
+                // rejected
+                r.overall = false;
+                r.error = result.message || "Verification failed";
+                r.reasons = result.reasons;
             }
         } catch (err: any) {
             r.error = err.message;
@@ -786,18 +762,35 @@ export default function VerifyPage() {
                                             className={`text-center mb-7 p-6 rounded-2xl border ${
                                                 results.overall
                                                     ? "bg-emerald-500/10 border-emerald-500/30"
-                                                    : "bg-red-500/10 border-red-500/30"
+                                                    : results.pendingReview
+                                                        ? "bg-amber-500/10 border-amber-500/30"
+                                                        : "bg-red-500/10 border-red-500/30"
                                             }`}
                                         >
-                                            <div className="text-5xl mb-3">{results.overall ? "🎉" : "❌"}</div>
+                                            <div className="text-5xl mb-3">
+                                                {results.overall ? "🎉" : results.pendingReview ? "⏳" : "❌"}
+                                            </div>
                                             <h2 className="text-2xl font-bold mb-1">
-                                                {results.overall ? "Verification Passed!" : "Verification Failed"}
+                                                {results.overall
+                                                    ? "Verification Passed!"
+                                                    : results.pendingReview
+                                                        ? "Submitted for Review"
+                                                        : "Verification Failed"}
                                             </h2>
                                             <p className="text-white/60 text-sm">
                                                 {results.overall
                                                     ? "Your identity has been verified. Credential issued to your DID."
-                                                    : "One or more checks did not pass. Review the details below."}
+                                                    : results.pendingReview
+                                                        ? "Your verification is under admin review. You'll see the result on your dashboard."
+                                                        : results.reasons?.length
+                                                            ? results.reasons.join(". ") + "."
+                                                            : "One or more checks did not pass. Review the details below."}
                                             </p>
+                                            {results.verificationId && (
+                                                <p className="text-xs text-white/40 mt-2 font-mono">
+                                                    ID: {results.verificationId}
+                                                </p>
+                                            )}
                                         </motion.div>
 
                                         <div className="space-y-4">
@@ -962,7 +955,7 @@ export default function VerifyPage() {
                                         )}
 
                                         {/* Retry button */}
-                                        {!results.overall && (
+                                        {!results.overall && !results.pendingReview && (
                                             <motion.div
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
